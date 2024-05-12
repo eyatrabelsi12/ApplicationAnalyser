@@ -1,0 +1,64 @@
+.focused .MuiOutlinedInput-notchedOutline {
+    border-color: black !important;
+  }
+  .input-blue {
+    color: rgb(144, 144, 161) !important;
+  }
+  
+  .focused {
+    color: grey !important;
+  }
+    
+  .custom-card {
+    width: 300%; /* Largeur fixe */
+    height: 460px; /* Hauteur fixe */
+    border-color: rgb(136, 248, 248) !important; /* Bordure verte */
+  }
+  .focused .MuiOutlinedInput-notchedOutline,
+.focused .MuiSelect-root {
+    border-color: black !important;
+}
+
+.input-blue {
+    color: rgb(144, 144, 161) !important;
+}
+
+.focused {
+    color: grey !important;
+}
+
+.custom-card {
+    width: 300%; /* Largeur fixe */
+    height: 470px; /* Hauteur fixe */
+    border-color: rgb(51, 233, 194) !important;
+  /* Bordure verte */
+}
+
+/* Ajustement de la hauteur des éléments */
+.MuiFormControl-root,
+.MuiOutlinedInput-root,
+.MuiInputBase-root {
+    height: 40px !important; /* Ajustement de la hauteur */
+}
+
+.type-label-focused {
+  position: 'fixed';
+  
+}
+.cardContainer {
+  border-color: aqua;
+  border-width: 1px;
+  width: 78%;
+  margin-top: 9%;
+  left: 21%;
+}
+
+.cardContent {
+  padding: 16px;
+}
+.blackBorder .MuiOutlinedInput-notchedOutline {
+  border-color: black;
+}
+
+
+
