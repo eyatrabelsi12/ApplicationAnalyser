@@ -43,14 +43,20 @@ function FileUploader() {
  
   const handleUpload = async () => {
     if (!selectedFile || !selectedOption || !buildHash) {
-      alert('Veuillez remplir tous les champs.');
+      const alertDiv = document.createElement('div');
+      alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 50%; transform: translate(-50%, -50%); padding: 20px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
+      alertDiv.innerHTML = `
+        Veuillez remplir tous les champs.
+        <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
+      `;
+      document.body.appendChild(alertDiv);
       return;
     }
- 
+  
     const fileReader = new FileReader();
     fileReader.onload = async (event) => {
       const fileData = JSON.parse(event.target.result);
- 
+  
       try {
         const response = await axios.post(
           'http://localhost:3008/insert-data',
@@ -67,33 +73,54 @@ function FileUploader() {
             withCredentials: true,
           }
         );
- 
+  
         const fileId = response.data.fileId;
- 
+  
         await saveDataToDatabase(selectedFile.name, fileId, fileData, fileId, selectedFile.name);
- 
+  
         const { successPercentage, failurePercentage, skippedPercentage, pendingPercentage } = response.data;
- 
+  
         setSuccessPercentage(formatPercentage(successPercentage));
         setFailurePercentage(formatPercentage(failurePercentage));
         setSkippedPercentage(formatPercentage(skippedPercentage));
         setPendingPercentage(formatPercentage(pendingPercentage));
- 
+  
         setShowStatusReports(true);
- 
-        alert('Fichier JSON chargé avec succès');
+  
+        const alertDiv = document.createElement('div');
+        alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 50%; transform: translate(-50%, -50%); padding: 20px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
+        alertDiv.innerHTML = `
+          Fichier JSON chargé avec succès
+          <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
+        `;
+        document.body.appendChild(alertDiv);
+  
         console.log('Réponse du serveur :', response.data);
       } catch (error) {
         if (error.response && error.response.status === 409) {
-          alert(`Le fichier ${selectedFile.name} existe déjà. Veuillez choisir un autre nom de fichier.`);
+          const alertDiv = document.createElement('div');
+          alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 55%; transform: translate(-50%, -50%); padding: 10px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
+          alertDiv.innerHTML = `
+         The file ${selectedFile.name} already exists. Please choose another file name.
+
+            <button style="width: 13%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 85%;" onclick="this.parentNode.remove()">OK</button>
+          `;
+          document.body.appendChild(alertDiv);
         } else {
-          alert('Erreur lors du chargement du fichier JSON');
+          const alertDiv = document.createElement('div');
+          alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 50%; transform: translate(-50%, -50%); padding: 20px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
+          alertDiv.innerHTML = `
+            Erreur lors du chargement du fichier JSON
+            <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
+          `;
+          document.body.appendChild(alertDiv);
           console.error('Erreur lors du chargement du fichier JSON :', error);
         }
       }
     };
     fileReader.readAsText(selectedFile);
   };
+  
  
   const handleOptionChange = (event) => {
     setSelectedOption(event.target.value);

@@ -43,7 +43,7 @@ const formatDay = (date) => {
     return date ? format(new Date(date), 'dd/MM/yyyy_HH:mm:ss') : ''; // Formater la date pour afficher le jour (dd), le mois (MM), l'année (yyyy), l'heure (HH), les minutes (mm) et les secondes (ss). Sinon, retourner une chaîne vide.
 };
 const formatDay1 = (date) => {
-    return date ? format(new Date(date), 'dd/MM/yyyy') : ''; // Modifier le format pour afficher uniquement le jour (dd), le mois (MM) et l'année (yyyy)
+    return date ? format(new Date(date), 'dd/MM') : ''; // Modifier le format pour afficher uniquement le jour (dd), le mois (MM) et l'année (yyyy)
 };
 
  
@@ -62,6 +62,10 @@ function Dashboard() {
     const [searchTerm, setSearchTerm] = useState(''); 
     const [rowsPerPage, setRowsPerPage] = useState(5);
     const [suiteOptions, setSuiteOptions] = useState([]);
+    const role = localStorage.getItem("role");
+    
+    const [userRole, setUserRole] = useState(localStorage.getItem("role"));
+
 
 
 
@@ -69,23 +73,29 @@ function Dashboard() {
  const [bugs, setBugs] = useState('');
  const [fauxBugs, setFauxBugs] = useState('');
  const [editingIndex, setEditingIndex] = useState(null);
+ // Ajoutez un nouvel état pour suivre l'option sélectionnée
+const [selectedSuiteOption, setSelectedSuiteOption] = useState(null);
 
- useEffect(() => {
+useEffect(() => {
     const fetchData = async () => {
-        try {
-            const response = await fetch('http://localhost:3008/automated');
-            if (!response.ok) {
-                throw new Error(`Failed to fetch data: ${response.status}`);
-            }
-            const data = await response.json();
-            setInitialTableData(data);
-            setTableData(data); // Initialisation des données affichées
-        } catch (error) {
-            console.error('Error fetching data:', error);
+      try {
+        const response = await fetch('http://localhost:3008/automated');
+        if (!response.ok) {
+          throw new Error(`Failed to fetch data: ${response.status}`);
         }
+        const data = await response.json();
+        setInitialTableData(data);
+        setTableData(data);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
     };
     fetchData();
-}, []);
+  }, []);
+
+  useEffect(() => {
+    setUserRole(localStorage.getItem("role")); // Met à jour userRole avec la valeur actuelle du rôle stocké dans le stockage local
+}, []); 
 
 useEffect(() => {
     const fetchSuiteOptions = async () => {
@@ -237,7 +247,10 @@ const [hoveredIndex, setHoveredIndex] = useState(null);
    
     const handleCategoryChange = async (category) => {
         setSelectedCategory(category);
+        setSelectedSuiteOption(null); 
     };
+   
+    
    
  
     const toggleChartSize1 = () => {
@@ -520,7 +533,7 @@ const fetchData1 = async () => {
     </div>
                                 </div>
                              
-                                {selectedFilter && isGraphExpanded1 && (
+                                {selectedFilter && isGraphExpanded1 &&   (
                                  
     <ReportsBarChart
         data={{
@@ -722,11 +735,106 @@ const fetchData1 = async () => {
                 }}
             />
            
-            <Select
+         
+           <Table>
+    <TableRow style={{ backgroundColor: 'white', height: 'fixed', color: 'black' }}>
+        {userRole === 'admin' && (
+            <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}>
+                <CheckCircleIcon style={{ color: 'orange' }} /> Username
+            </TableCell>
+        )}
+        <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}>
+            <PeopleIcon style={{ color: 'blue' }} /> Sprint
+        </TableCell>
+        <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}>
+            <BugReportIcon style={{ color: 'green' }} /> Raised Bugs
+        </TableCell>
+        <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}>
+            <WarningIcon style={{ color: 'red' }} /> False Positive
+        </TableCell>
+        <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}>
+            <BarChartIcon style={{ color: 'gray' }} /> False Positive Percentage
+        </TableCell>
+        <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}>
+            <CheckCircleIcon style={{ color: 'green' }} /> True Bugs
+        </TableCell>
+        <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}>
+            <PlaylistAddCheckIcon style={{ color: 'black' }} /> Action
+        </TableCell>
+    </TableRow>
+
+    <TableBody>
+        {tableData
+            .filter(data => data.selected_sprint.toLowerCase().includes(searchTerm.toLowerCase()))
+            .slice(0, rowsPerPage === -1 ? undefined : rowsPerPage)
+            .map((data, index) => (
+                <TableRow
+                    key={index}
+                    onMouseEnter={() => handleMouseEnter(index)}
+                    onMouseLeave={handleMouseLeave}
+                    style={{ backgroundColor: hoveredIndex === index ? 'rgb(237, 235, 234)' : 'inherit' }}
+                >
+                    {userRole === 'admin' && (
+                        <TableCell style={{ fontFamily: 'italic', fontSize: '100%' }}>{data.username}</TableCell>
+                    )}
+                    <TableCell style={{ fontFamily: 'italic', fontSize: '100%' }}>{data.selected_sprint}</TableCell>
+                    <TableCell style={{ fontFamily: 'italic', fontSize: '100%' }}>
+                        {editingIndex === index ? (
+                            <TextField value={bugs} onChange={handleBugsChange} />
+                        ) : (
+                            data.bugs_on_jira
+                        )}
+                    </TableCell>
+                    <TableCell style={{ fontFamily: 'italic', fontSize: '100%' }}>
+                        {editingIndex === index ? (
+                            <TextField value={fauxBugs} onChange={handleFauxBugsChange} />
+                        ) : (
+                            data.faux_bugs
+                        )}
+                    </TableCell>
+                    <TableCell style={{ fontFamily: 'italic', fontSize: '100%' }}>
+                        {data.bugs_on_jira !== 0 ? ((data.faux_bugs * 100) / data.bugs_on_jira).toFixed(2) + '%' : 'N/A'}
+                    </TableCell>
+                    <TableCell style={{ fontFamily: 'italic', fontSize: '100%' }}>{data.bugs_on_jira - data.faux_bugs}</TableCell>
+                    <TableCell style={{ fontFamily: 'italic', fontSize: '100%' }}>
+                        {userRole === 'user' ? (
+                            editingIndex === index ? (
+                                <IconButton onClick={() => handleCheckClick(index)}>
+                                    <CheckIcon />
+                                </IconButton>
+                            ) : (
+                                <IconButton onClick={() => handleRowClick(index)}>
+                                    <EditIcon style={{ color: 'rgb(21, 211, 176)' }} />
+                                </IconButton>
+                            )
+                        ) : (
+                            editingIndex === index ? (
+                                <IconButton onClick={() => handleCheckClick(index)}>
+                                    <CheckIcon />
+                                    <EditIcon style={{ color: 'rgb(21, 211, 176)' }} />
+                                </IconButton>
+                            ) : (
+                                <IconButton onClick={() => handleRowClick(index)}>
+                                    <EditIcon style={{ color: 'rgb(21, 211, 176)' }} />
+                                    <DeleteIcon style={{ color: 'red', marginLeft: '15%' }} onClick={() => handleDeleteClick(index)} />
+                                </IconButton>
+                            )
+                        )}
+                    </TableCell>
+                </TableRow>
+            ))}
+    </TableBody>
+</Table>
+
+
+
+        </TableContainer>
+        <p style={{  marginLeft: '84%', marginTop: '1%',fontFamily:'italic',color:'gray'}}>Per_Row_Page</p>
+        <Select
                 value={rowsPerPage}
                 onChange={handleRowsPerPageChange}
                 variant="outlined"
-                style={{ width: 'auto', marginLeft: '67%', marginTop: '1%', borderColor: 'black' }}
+                style={{ width: '5%', marginLeft: '90%', marginTop: '1%', borderColor: 'black' }}
             >
                 <p>Per_Row_Page</p>
                 <MenuItem value={5}>5</MenuItem>
@@ -734,65 +842,6 @@ const fetchData1 = async () => {
                 <MenuItem value={25}>25</MenuItem>
                 <MenuItem value={-1}>All</MenuItem>
             </Select>
-                
-            <Table>
-           
-                    <TableRow style={{backgroundColor:'rgb(168, 166, 166)', height: 'fixed',color:'white'}}>
-                        <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}><PeopleIcon style={{color:'black'}} />Sprint</TableCell>
-                        <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}> <BugReportIcon style={{color:'black'}}  />Raised_Bugs</TableCell>
-                        <TableCell style={{ fontWeight: 'bold',fontFamily: 'italic', fontSize: '80%' }}>  <WarningIcon  style={{color:'black'}}/>False_Positive</TableCell>
-                        <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}> <BarChartIcon style={{color:'black'}} />False_positive_percentage</TableCell>
-                        <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}> <CheckCircleIcon style={{color:'black'}} />True_Bugs</TableCell>
-                        <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}><PlaylistAddCheckIcon  style={{color:'black'}}/>Action</TableCell>
-                    </TableRow>
-           
-                <TableBody>
-                    {tableData
-                        .filter(data => data.selected_sprint.toLowerCase().includes(searchTerm.toLowerCase()))
-                        .slice(0, rowsPerPage === -1 ? undefined : rowsPerPage) // Si All est sélectionné, afficher toutes les lignes
-                        .map((data, index) => (
-                            <TableRow
-                                key={index}
-                                onMouseEnter={() => handleMouseEnter(index)}
-                                onMouseLeave={handleMouseLeave}
-                                style={{ backgroundColor: hoveredIndex === index ? 'rgb(237, 235, 234)' : 'inherit' }}
-                            >
-                                <TableCell style={{ fontFamily: 'italic', fontSize: '100%' }}>{data.selected_sprint}</TableCell>
-                                <TableCell  style={{ fontFamily: 'italic', fontSize: '100%' }}>
-                                    {editingIndex === index ? (
-                                        <TextField value={bugs} onChange={handleBugsChange}  />
-                                    ) : (
-                                        data.bugs_on_jira
-                                    )}
-                                </TableCell>
-                                <TableCell style={{ fontFamily: 'italic', fontSize: '100%' }}>
-                                    {editingIndex === index ? (
-                                        <TextField value={fauxBugs} onChange={handleFauxBugsChange} />
-                                    ) : (
-                                        data.faux_bugs
-                                    )}
-                                </TableCell>
-                                <TableCell style={{ fontFamily: 'italic', fontSize: '100%' }}>
-                                    {data.bugs_on_jira !== 0 ? ((data.faux_bugs * 100) / data.bugs_on_jira).toFixed(2) + '%' : 'N/A'}
-                                </TableCell>
-                                <TableCell style={{ fontFamily: 'italic', fontSize: '100%' }}>{data.bugs_on_jira - data.faux_bugs}</TableCell>
-                                <TableCell style={{ fontFamily: 'italic', fontSize: '100%' }}>
-                                    {editingIndex === index ? (
-                                        <IconButton onClick={() => handleCheckClick(index)}>
-                                            <CheckIcon />
-                                        </IconButton>
-                                    ) : (
-                                        <IconButton onClick={() => handleRowClick(index)}>
-                                            <EditIcon style={{color:'blue'}} />
-                                            <DeleteIcon style={{ color: 'red' ,marginLeft:'15%'}} onClick={() => handleDeleteClick(index)} />
-                                        </IconButton>
-                                    )}
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                </TableBody>
-            </Table>
-        </TableContainer>
 
 
 

@@ -162,7 +162,7 @@ const CercleDeRapportPage = () => {
                         id="input"
                         label="Entrez le nom du fichier"
                         variant="outlined"
-                        width="50%"
+                        width="70%"
                       
                         margin="normal"
                         required
@@ -193,7 +193,7 @@ const CercleDeRapportPage = () => {
                                     <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(150, 142, 142)' }}>DATAHUB visage</Typography>
                                     <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(119, 119, 119)' }}><b style={{ color: 'rgb(107, 103, 103)' }}>Suite</b></Typography>
                                     <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(150, 142, 142)' }}>{summary.tag}</Typography>
-                                    <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(119, 119, 119)' }}><b style={{ color: 'rgb(107, 103, 103)' }}>Build date</b></Typography>
+                                    <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(119, 119, 119)' }}><b style={{ color: 'rgb(107, 103, 103)' }}>Date_d'execution</b></Typography>
                                     <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(150, 142, 142)' }}>{formatDate(summary.first_textdate)}</Typography>
                                     <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(119, 119, 119)' }}><b style={{ color: 'rgb(107, 103, 103)' }}>Environnement DATAHUB</b></Typography>
                                     {summary && summary.first_type && (

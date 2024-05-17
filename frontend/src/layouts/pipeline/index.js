@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+
 import Grid from "@mui/material/Grid";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
@@ -10,15 +12,27 @@ import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import MDBox from "components/MDBox";
 import Header from "layouts/profile/components/Header1";
 import ListAltIcon from "@mui/icons-material/ListAlt";
+import { getUserRole } from "../utils/authUtils"; 
 
 function Pipeline() {
   const [suiteName, setSuiteName] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [otherInputValue, setOtherInputValue] = useState("");
-  const [suiteNameToDelete, setSuiteNameToDelete] = useState(""); // Nouvel état
+  const [suiteNameToDelete, setSuiteNameToDelete] = useState(""); 
+  const userRole = getUserRole();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check user role and redirect if not admin
+    if (userRole !== "admin") {
+      navigate("/dashboard"); // Redirect to dashboard if not admin
+    }
+  }, [userRole, navigate]);
 
   const handleSuiteNameChange = (event) => {
     setSuiteName(event.target.value);
+    // Mise à jour de suiteNameToDelete avec la nouvelle valeur de suiteName
+    setSuiteNameToDelete(event.target.value); 
   };
 
   const handleDateChange = (event) => {
@@ -26,149 +40,184 @@ function Pipeline() {
   };
 
   const handleOtherInputChange = (event) => {
-    setOtherInputValue(event.target.value);
-    setSuiteNameToDelete(event.target.value); // Mettre à jour la valeur à supprimer
+    const suiteNameValue = event.target.value;
+    setOtherInputValue(suiteNameValue);
+    setSuiteNameToDelete(suiteNameValue); 
   };
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
+const handleSubmit = (event) => {
+  event.preventDefault();
+  
+  // Check if both fields are filled
+  if (!suiteName || !selectedDate) {
+    const alertDiv = document.createElement('div');
+    alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 50%; transform: translate(-50%, -50%); padding: 20px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
+    alertDiv.innerHTML = `
+      Please fill in both fields.
+      <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
+    `;
+    document.body.appendChild(alertDiv);
+    return;
+  }
+  
+  fetch("http://localhost:3008/submit-data", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ suiteName, selectedDate, otherInputValue }),
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      console.log(data);
+      if (data.success) {
+        const alertDiv = document.createElement('div');
+        alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 50%; transform: translate(-50%, -50%); padding: 20px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
+        alertDiv.innerHTML = `
+          Data saved successfully!
+          <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
+        `;
+        document.body.appendChild(alertDiv);
 
-    fetch("http://localhost:3008/submit-data", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ suiteName, selectedDate, otherInputValue }),
+        // Reset form fields after successful submission
+        setSuiteName("");
+        setSelectedDate("");
+        setOtherInputValue("");
+        setSuiteNameToDelete("");
+      } else {
+        const alertDiv = document.createElement('div');
+        alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 50%; transform: translate(-50%, -50%); padding: 20px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
+        alertDiv.innerHTML = `
+          An error occurred while saving data.
+          <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
+        `;
+        document.body.appendChild(alertDiv);
+      }
     })
-      .then((response) => response.json())
-      .then((data) => {
-        console.log(data);
-        if (data.success) {
-          alert("Data saved successfully!");
-        } else {
-          alert("An error occurred while saving data.");
-        }
-      })
-      .catch((error) => {
-        console.error("Error submitting form data", error);
-        alert("An error occurred while submitting form data.");
-      });
-  };
+    .catch((error) => {
+      console.error("Error submitting form data", error);
+      const alertDiv = document.createElement('div');
+      alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 50%; transform: translate(-50%, -50%); padding: 20px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
+      alertDiv.innerHTML = `
+        An error occurred while submitting form data.
+        <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
+      `;
+      document.body.appendChild(alertDiv);
+    });
+};
 
-  const handleDelete = () => {
-    fetch("http://localhost:3008/delete-data", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ suiteNameToDelete }), // Envoyer la valeur à supprimer
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        console.log(data);
-        if (data.success) {
-          alert("Data deleted successfully!"); // Alerte pour la suppression réussie
-        } else {
-          alert("An error occurred while deleting data.");
-        }
-      })
-      .catch((error) => {
-        console.error("Error deleting data", error);
-        alert("An error occurred while deleting data.");
-      });
-  };
+const handleDelete = async () => {
+  // Check if the Name_of_Suite field is filled
+  if (!suiteNameToDelete) {
+    const alertDiv = document.createElement('div');
+    alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 50%; transform: translate(-50%, -50%); padding: 20px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
+    alertDiv.innerHTML = `
+      Please fill in the Name_of_Suite field.
+      <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
+    `;
+    document.body.appendChild(alertDiv);
+    return;
+  }
+
+  try {
+    const response = await fetch(`http://localhost:3008/suite-options/${suiteNameToDelete}`, {
+      method: "DELETE",
+    });
+
+    const data = await response.json();
+    if (response.ok) {
+      const alertDiv = document.createElement('div');
+      alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 50%; transform: translate(-50%, -50%); padding: 20px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
+      alertDiv.innerHTML = `
+        ${data.message}
+        <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
+      `;
+      document.body.appendChild(alertDiv);
+    } else {
+      const alertDiv = document.createElement('div');
+      alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 50%; transform: translate(-50%, -50%); padding: 20px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
+      alertDiv.innerHTML = `
+        An error occurred while deleting data: ${data.message}
+        <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
+      `;
+      document.body.appendChild(alertDiv);
+    }
+  } catch (error) {
+    console.error("Error deleting data", error);
+    const alertDiv = document.createElement('div');
+    alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 50%; transform: translate(-50%, -50%); padding: 20px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
+    alertDiv.innerHTML = `
+      An error occurred while deleting data: ${error.message}
+      <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
+    `;
+    document.body.appendChild(alertDiv);
+  }
+};
+
+
+
+  
 
   return (
     <DashboardLayout>
       <DashboardNavbar />
       <MDBox mb={1} />
       <Header>
-        <MDBox mt={-5} mb={-2} style={{color:'rgb(242, 242, 242)'}}>
-          <Grid container spacing={3} >
-            <Grid item xs={12} md={6} >
-              <Card sx={{ bgcolor: "rgb(249, 247, 247)" }} style={{height:'90%'}}>
-                <CardContent>
-                <FormControl fullWidth sx={{ marginBottom: 2 }}>
-  <TextField
-    id="nom"
-    label="Name_of_Suite"
-    type="text"
-    value={suiteName}
-    onChange={handleSuiteNameChange}
-    style={{
-     
-      marginTop: "20px",
-       // Ajout de marge en bas
-    }}
-    InputProps={{
-      startAdornment: (
-        <ListAltIcon style={{ color: "black" }} />
-      ),
-      sx: {
-        "&:focused": {
-          borderColor: "black",
-        },
-      },
-    }}
-  />
-</FormControl>
-<FormControl fullWidth>
-  <TextField
-    id="date"
-    label="Select Date"
-    type="date"
-    value={selectedDate}
-    onChange={handleDateChange}
-    style={{
-      
-      marginTop: "20px",
-    
-    }}
-    InputLabelProps={{
-      shrink: true,
-    }}
-  />
-</FormControl>
-
-<Button
-  variant="contained"
-  color="primary"
-  type="submit"
-  style={{
-    color: "rgb(7, 198, 163)",
-    backgroundColor: "black",
-    marginTop: "40px",
-    marginBottom: "20px", // Ajout de marge en bas
-  }}
-  onClick={handleSubmit}
->
-  Add_Suite
-</Button>
-
-                </CardContent>
-              </Card>
-            </Grid>
-           
+        <MDBox mt={-5} mb={-2} style={{ color: "rgb(242, 242, 242)" }}>
+          <Grid container spacing={6}>
             <Grid item xs={12} md={6}>
-              <Card sx={{ bgcolor: "rgb(249, 247, 247)" }} style={{height:'90%'}}>
+              <Card sx={{ bgcolor: "white" }} style={{ height: "90%" }}>
                 <CardContent>
-                  <FormControl fullWidth>
+                  <FormControl fullWidth sx={{ marginBottom: 2 }}>
                     <TextField
-                      id="otherInput"
+                      id="nom"
                       label="Name_of_Suite"
                       type="text"
-                      value={otherInputValue}
-                      onChange={handleOtherInputChange}
+                      value={suiteName}
+                      onChange={handleSuiteNameChange}
+                      style={{
+                        marginTop: "20px",
+                      }}
+                      InputProps={{
+                        startAdornment: <ListAltIcon style={{ color: "black" }} />,
+                        sx: {
+                          "&:focused": {
+                            borderColor: "black",
+                          },
+                        },
+                      }}
+                    />
+                  </FormControl>
+                  <FormControl fullWidth>
+                    <TextField
+                      id="date"
+                      label="Select Date"
+                      type="date"
+                      value={selectedDate}
+                      onChange={handleDateChange}
+                      style={{
+                        marginTop: "20px",
+                      }}
                       InputLabelProps={{
                         shrink: true,
                       }}
-                      style={
-                        {
-                          marginTop: "17px",
-                        }
-                      }
                     />
                   </FormControl>
+
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    type="submit"
+                    style={{
+                      color: "rgb(7, 198, 163)",
+                      backgroundColor: "black",
+                      marginTop: "40px",
+                      marginBottom: "20px",
+                    }}
+                    onClick={handleSubmit}
+                  >
+                    Add Suite
+                  </Button>
                   <Button
                     variant="contained"
                     color="secondary"
@@ -176,11 +225,11 @@ function Pipeline() {
                     style={{
                       color: "rgb(7, 198, 163)",
                       backgroundColor: "black",
-                      marginRight: "10px",
-                      marginBottom:'-70px'
+                      marginLeft: "20px",
+                      marginBottom: "-20px",
                     }}
                   >
-                    Delete_Suite
+                    Delete Suite
                   </Button>
                 </CardContent>
               </Card>

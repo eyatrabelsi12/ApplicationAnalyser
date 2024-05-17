@@ -9,7 +9,7 @@ import NotInterestedIcon from '@mui/icons-material/NotInterested';
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
 import { faCheckCircle, faNotEqual, faEquals } from '@fortawesome/free-solid-svg-icons';
  
- 
+import { faLink } from '@fortawesome/free-solid-svg-icons';
  
 import { styled } from '@mui/material/styles';
  
@@ -101,11 +101,23 @@ function Tables() {
     try {
        // Vérifier que les noms de fichiers sont différents et non vides
       if (fileName1 === fileName2) {
-        alert("Saisissez deux rapports différents.");
+        const alertDiv = document.createElement('div');
+        alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 59%; transform: translate(-50%, -50%); padding: 20px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
+        alertDiv.innerHTML = `
+          Saisissez deux rapports différents.
+          <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
+        `;
+        document.body.appendChild(alertDiv);
         return;
       }
       if (fileName1 === '' || fileName2 === '') {
-        alert("Veuillez saisir les noms des deux fichiers.");
+        const alertDiv = document.createElement('div');
+        alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 50%; transform: translate(-50%, -50%); padding: 20px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
+        alertDiv.innerHTML = `
+          Veuillez saisir les noms des deux fichiers.
+          <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
+        `;
+        document.body.appendChild(alertDiv);
         return;
       }
  
@@ -117,11 +129,7 @@ function Tables() {
         console.log("features :", data);
  
         // Vérifier si des données ont été récupérées
-        if (data.length === 0) {
-            alert("Les deux fichiers n'appartiennent pas au même type de test.");
-            setShowFeatures(false);
-            return;
-        }
+      
        
         let fileInfoData;
         const fileInfoResponse = await fetch(`http://localhost:3008/file-info?fileName1=${encodeURIComponent(fileName1)}&fileName2=${encodeURIComponent(fileName2)}`);
@@ -219,9 +227,17 @@ function Tables() {
         setIsComparisonDone(true);
     } catch (error) {
         console.error('Erreur lors de la récupération des données:', error.message);
+        const alertDiv = document.createElement('div');
+        alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 50%; transform: translate(-50%, -50%); padding: 20px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
+        alertDiv.innerHTML = `
+          Erreur lors de la récupération des données: ${error.message}
+          <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
+        `;
+        document.body.appendChild(alertDiv);
         setError('Erreur lors de la récupération des données. Veuillez réessayer.');
     }
 };
+
 const passedPercentage = parseFloat(fileInfo1.passed_percentage).toFixed(2);
 const failedPercentage = parseFloat(fileInfo1.failed_percentage).toFixed(2);
 const skippedPercentage = parseFloat(fileInfo1.skipped_percentage).toFixed(2);
@@ -395,10 +411,10 @@ function cleanSpecialCharacters(str, keepHyphen = false) {
               <MDBox pt={2} style={{ maxHeight: '80vh', overflow: 'auto' }}>
                 <div className="compare-page">
                   <div className="input-section">
-                  <label htmlFor="fileName2" style={{fontFamily:"italic",fontSize:"18px"}}>Execution_1</label>
-                    <input type="text" id="fileName1" value={fileName1} onChange={(e) => setFileName1(e.target.value)} />
-                    <label htmlFor="fileName2" style={{fontFamily:"italic",fontSize:"18px"}}>Execution_2</label>
-                    <input type="text" id="fileName2" value={fileName2} onChange={(e) => setFileName2(e.target.value)} />
+                  <label htmlFor="fileName2" style={{fontFamily:"italic",fontSize:"18px" }}>Execution_1</label>
+                    <input type="text" id="fileName1" value={fileName1} onChange={(e) => setFileName1(e.target.value)}  style={{width:"29.2%" }}/>
+                    <label htmlFor="fileName2" style={{fontFamily:"italic",fontSize:"18px",marginLeft:'70px'}}>Execution_2</label>
+                    <input type="text" id="fileName2" value={fileName2} onChange={(e) => setFileName2(e.target.value)} style={{width:"29.6%" }}/>
                     <button onClick={fetchFeatures}>Compare</button>
                     {error && <p className="error">Erreur: {error}</p>}
                   </div>
@@ -414,7 +430,7 @@ function cleanSpecialCharacters(str, keepHyphen = false) {
            
                 <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(119, 119, 119)' }}><b style={{ color: 'rgb(107, 103, 103)' }}>DATAHUB environment</b></Typography>
                 <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(150, 142, 142)' }}>{fileInfo1.type}</Typography>
-                <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(119, 119, 119)' }}><b style={{ color: 'rgb(107, 103, 103)' }}>Build date</b></Typography>
+                <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(119, 119, 119)' }}><b style={{ color: 'rgb(107, 103, 103)' }}>Date_D'execution</b></Typography>
                 <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(150, 142, 142)' }}> {formatBuildDate(fileInfo1.first_textdate)}</Typography>
                 <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(119, 119, 119)' }}><b style={{ color: 'rgb(107, 103, 103)' }}>Suite</b></Typography>
                 <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(150, 142, 142)' }}>{fileInfo1.tag}</Typography>
@@ -476,7 +492,7 @@ function cleanSpecialCharacters(str, keepHyphen = false) {
         <div>
             <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(119, 119, 119)' }}><b style={{ color: 'rgb(107, 103, 103)' }}>DATAHUB environment</b></Typography>
             <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(150, 142, 142)' }}>{fileInfo2.type}</Typography>
-            <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(119, 119, 119)' }}><b style={{ color: 'rgb(107, 103, 103)' }}>Build date</b></Typography>
+            <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(119, 119, 119)' }}><b style={{ color: 'rgb(107, 103, 103)' }}>Date_D'execution</b></Typography>
             <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(150, 142, 142)' }}> {formatBuildDate(fileInfo2.first_textdate)}</Typography>
             <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(119, 119, 119)' }}><b style={{ color: 'rgb(107, 103, 103)' }}>Suite</b></Typography>
             <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(150, 142, 142)' }}>{fileInfo2.tag}</Typography>
@@ -599,7 +615,9 @@ function cleanSpecialCharacters(str, keepHyphen = false) {
  
                 return (
                   <tr key={feature.FeatureName}>
-                    <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>{cleanedFeatureNameDisplay}</td>
+                   
+                    <td style={{ textAlign: 'center', verticalAlign: 'middle' }}> <a href={`${'https://support.neoxam.com/browse/'
+}${cleanedFeatureNameDisplay}`} target="_blank" rel="noopener noreferrer">{cleanedFeatureNameDisplay}</a></td>
                     <td>
     <a href="#" onClick={() => handleFeatureClick(feature.FeatureName)} >{cleanedFeatureTitle}</a>
   </td>
@@ -683,7 +701,12 @@ function cleanSpecialCharacters(str, keepHyphen = false) {
           const halfTestNames = testPair.testNames.slice(0, halfLength); // Prend la moitié des lignes des testName
           return halfTestNames.map((testName, innerIndex) => (
             <tr key={testName} > {/* Utilisez le nom de la featureName comme clé */}
-               <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>{testName.replace('@', '')}</td> {/* Supprimer le caractère '@' */}
+             <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
+  <a href={`https://support.neoxam.com/browse/${testName.replace('@', '')}`} target="_blank" rel="noopener noreferrer">
+    {testName.replace('@', '')}
+  </a>
+</td>
+ 
               <td>{testPair.testName[index*0]}</td>
               <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
               <FontAwesomeIcon
@@ -692,8 +715,14 @@ function cleanSpecialCharacters(str, keepHyphen = false) {
   title={statusIcon === 'difference-icon' ? 'Different' : 'Identical'}
 />
 </td>
-              <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>{testPair.stepStatusFile1}</td>
-            <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>{testPair.stepStatusFile2}</td>
+<td style={{ textAlign: 'center', verticalAlign: 'middle' }}>{testPair.stepStatusFile1} <a href={`http://yoda:9999/fs/mnt/nfs/citstorage/CIT/Reports/${testPair.fileTypeFile1}/${testPair.dateFile1}/${testPair.nameFile1}`} target="_blank" rel="noopener noreferrer">
+ 
+    <FontAwesomeIcon icon={faLink} style={{ marginLeft: '5px', color: 'blue', cursor: 'pointer' }} />
+  </a></td>
+            <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>{testPair.stepStatusFile2}<a href={`http://yoda:9999/fs/mnt/nfs/citstorage/CIT/Reports/${testPair.fileTypeFile2}/${testPair.dateFile2}/${testPair.nameFile2}`} target="_blank" rel="noopener noreferrer">
+ 
+<FontAwesomeIcon icon={faLink} style={{ marginLeft: '5px', color: 'blue', cursor: 'pointer' }} />
+</a></td>
             </tr>
           ));
         })}

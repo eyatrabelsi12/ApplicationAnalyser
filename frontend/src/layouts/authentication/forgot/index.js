@@ -9,40 +9,80 @@ import MDButton from "components/MDButton";
 import CoverLayout from "layouts/authentication/components/CoverLayout";
 import bgImage from "assets/images/neoxam.jpg";
  
+// Fonction pour générer un mot de passe aléatoire
+function generateRandomPassword(length = 10) {
+  const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let password = '';
+  for (let i = 0; i < length; i++) {
+    const randomIndex = Math.floor(Math.random() * charset.length);
+    password += charset[randomIndex];
+  }
+  return password;
+}
+ 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
  
   const handleSubmit = async (e) => {
     e.preventDefault();
- 
-    if (newPassword !== confirmPassword) {
-      alert('Les mots de passe ne correspondent pas.');
-      return;
-    }
+   
+   
  
     const url = 'http://localhost:3003/forgot-password';
-    const data = { email, newPassword };
+    const data = { email: email };
  
     try {
-      const response = await axios.post(url, data);
-      console.log(response.data);
+      const response = await axios.post(url, data, {
+        headers: {
+            'Content-Type': 'application/json',
+        }
+      });
  
-      alert('Instructions de réinitialisation envoyées à votre adresse e-mail.');
+      console.log(response.data);
+      alertWithBackground('Reset instructions sent to your email address.'); // Assuming setSuccessMessage is replaced with alert for simplification
+ 
     } catch (error) {
       if (error.response) {
         console.error('Erreur de réponse du serveur:', error.response.data);
-        alert(`Error: ${error.response.data.message}`);
+        alertWithBackground(`Error: ${error.response.data.error}`); // Assuming the server sends back an 'error' key in the data object
       } else if (error.request) {
         console.error('Aucune réponse du serveur reçue.');
-        alert('Error: The server did not respond. Please try again later.');
+        alertWithBackground('Error: The server did not respond. Please try again later.');
       } else {
         console.error('Erreur lors de la configuration de la requête:', error.message);
-        alert('Error: An error occurred while setting up the request. Please check your connection and try again.');
+        alertWithBackground('Error: An error occurred while setting up the request. Please check your connection and try again.');
       }
     }
-  };
+};
+const alertWithBackground = (message, backgroundColor) => {
+  const alertContainer = document.createElement("div");
+  alertContainer.classList.add("custom-alert");
+  alertContainer.textContent = message;
+  alertContainer.style.backgroundColor = 'white'; // Définir la couleur de fond
+  alertContainer.style.padding = '10px'; // Ajouter un padding pour une meilleure apparence
+  alertContainer.style.color = 'black'; // Définir la couleur du texte pour contraster avec le fond
+  alertContainer.style.borderRadius = '5px'; // Ajouter un peu de bordure arrondie
+  alertContainer.style.marginTop = '-20%';
+  alertContainer.style.fontFamily = 'italic';
+  alertContainer.style.width = '25%';
+  const okButton = document.createElement("button");
+  okButton.textContent = "OK";
+  okButton.style.width = '20%';
+  okButton.style.backgroundColor = 'black';
+  okButton.style.color = 'white';
+  okButton.style.fontFamily = 'italic';
+  okButton.style.borderColor = '#1de9b6';
+  okButton.style.marginLeft = '75%';
+  okButton.addEventListener("click", () => {
+      document.body.removeChild(alertContainer);
+  });
+ 
+  alertContainer.appendChild(okButton);
+  document.body.appendChild(alertContainer);
+};
+ 
  
   return (
     <CoverLayout image={bgImage}>
@@ -62,7 +102,7 @@ const ForgotPassword = () => {
             Forgot Password
           </MDTypography>
           <MDTypography display="block" variant="button" color="white" my={1}>
-            Enter your email and new password
+            Enter your email to receive a password reset link
           </MDTypography>
         </MDBox>
         <MDBox pt={4} pb={3} px={3}>
@@ -72,42 +112,31 @@ const ForgotPassword = () => {
                 type="email"
                 label="Email"
                 fullWidth
-                placeholder="Email"
+                placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+               
               />
             </MDBox>
-            <MDBox mb={2}>
-              <MDInput
-                type="password"
-                label="New Password"
-                fullWidth
-                placeholder="New Password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-              />
-            </MDBox>
-            <MDBox mb={2}>
-              <MDInput
-                type="password"
-                label="Confirm Password"
-                fullWidth
-                placeholder="Confirm Password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
-            </MDBox>
+   
             <MDBox mt={4} mb={1}>
               <MDButton variant="gradient" color="success" fullWidth type="submit">
                 Reset Password
               </MDButton>
             </MDBox>
+            {successMessage && (
+              <MDBox mt={3} mb={1} textAlign="center">
+                <MDTypography variant="body1" color="success">
+                  {successMessage}
+                </MDTypography>
+              </MDBox>
+            )}
             <MDBox mt={3} mb={1} textAlign="center">
               <MDTypography variant="button" color="text">
                 Remember your password?{" "}
                 <MDTypography
                   component={Link}
-                  to="/authentication/reset-password"
+                  to="/authentication/sign-in"
                   variant="button"
                   color="success"
                   fontWeight="medium"

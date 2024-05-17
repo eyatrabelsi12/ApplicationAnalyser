@@ -16,6 +16,7 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [attemptCount, setAttemptCount] = useState(0);
   const [isAccountLocked, setIsAccountLocked] = useState(false);
+  const [loginSuccess, setLoginSuccess] = useState(false);
 
   useEffect(() => {
     const lockoutDuration = 2 * 60 * 60 * 1000; // 2 heures
@@ -27,53 +28,68 @@ const Login = () => {
       }, lockoutDuration);
     }
   }, [attemptCount]);
-  
 
   const handleLogin = async (e) => {
     e.preventDefault();
 
     if (isAccountLocked) {
-      alert("Your account is temporarily locked. Please try again later.");
-      return;
+        alert("Your account is temporarily locked. Please try again later.");
+        return;
     }
 
-    const url = "http://localhost:3003/login";
+    const url = "http://localhost:3003/login"; // Change this to your server URL
     const data = { email, password };
 
     try {
-      const response = await axios.post(url, data);
-      console.log(response.data);
-      navigate("/dashboard");
-      alert("Success! Logged in successfully.");
+        const response = await axios.post(url, data);
+        console.log(response.data);
+        setLoginSuccess(true);
+
+        // Store the token and user role in local storage after a successful login
+        const { token, role } = response.data;
+        localStorage.setItem("token", token);
+        localStorage.setItem("role", role);  // Store user role
     } catch (error) {
-      setAttemptCount(attemptCount + 1);
-      let errorMessage = "";
-      if (error.response) {
-        console.error("Erreur de réponse du serveur:", error.response.data);
-        errorMessage = `Error: ${error.response.data.message}`;
-      } else if (error.request) {
-        console.error("Aucune réponse du serveur reçue.");
-        errorMessage = "Error: The server did not respond. Please try again later.";
-      } else {
-        console.error(
-          "Erreur lors de la configuration de la requête:",
-          error.message
-        );
-        errorMessage = "Error: An error occurred while setting up the request. Please check your connection and try again.";
-      }
-      alertWithBlackBackground(errorMessage);
+        setAttemptCount(attemptCount + 1);
+        let errorMessage = "";
+        if (error.response) {
+            console.error("Erreur de réponse du serveur:", error.response.data);
+            errorMessage = `Error: ${error.response.data.message}`;
+        } else if (error.request) {
+            console.error("Aucune réponse du serveur reçue.");
+            errorMessage = "Error: The server did not respond. Please try again later.";
+        } else {
+            console.error("Erreur lors de la configuration de la requête:", error.message);
+            errorMessage = "Error: An error occurred while setting up the request. Please check your connection and try again.";
+        }
+        alertWithBlackBackground(errorMessage);
     }
-  };
+};
+
+
 
   const alertWithBlackBackground = (message) => {
     const alertContainer = document.createElement("div");
     alertContainer.classList.add("custom-alert");
     alertContainer.textContent = message;
-    document.body.appendChild(alertContainer);
-    setTimeout(() => {
+    const okButton = document.createElement("button");
+    okButton.textContent = "OK";
+    okButton.style.width = '20%';
+    okButton.style.backgroundColor = 'black';
+    okButton.style.color = 'white';
+    okButton.style.fontFamily = 'italic';
+    okButton.style.borderColor = '#1de9b6';
+    okButton.style.marginLeft = '75%';
+    okButton.addEventListener("click", () => {
       document.body.removeChild(alertContainer);
-    }, 5000);
+      if (loginSuccess) {
+        navigate("/dashboard");
+      }
+    });
+    alertContainer.appendChild(okButton);
+    document.body.appendChild(alertContainer);
   };
+  
 
   return (
     <CoverLayout image={bgImage}>
@@ -90,15 +106,12 @@ const Login = () => {
           textAlign="center"
         >
           <MDTypography variant="h4" fontWeight="medium" color="white" mt={1}>
-            Sign in
-          </MDTypography>
-          <MDTypography variant="h4" fontWeight="medium" color="white" mt={1}>
-            NeoXam Analyser
+           DATAHUB ANALYSER AND KPI
           </MDTypography>
         </MDBox>
         <MDBox pt={4} pb={3} px={3}>
           <MDBox component="form" role="form" onSubmit={handleLogin}>
-            <MDBox mb={5}>
+            <MDBox mb={2}>
               <MDInput
                 type="email"
                 label="Email"
@@ -156,6 +169,12 @@ const Login = () => {
           </MDBox>
         </MDBox>
       </Card>
+      {loginSuccess && (
+        <div style={{position: 'fixed', top: '11%', left: '50%', transform: 'translate(-50%, -50%)', padding: '20px', backgroundColor: 'rgb(255, 255, 255)', color: 'rgb(0, 0, 0)',  borderRadius: '5px', zIndex: '9999', fontFamily:' italic'}}>
+          Success! Logged in successfully.
+          <button onClick={() => navigate("/dashboard")} style={{width:'20%',backgroundColor:'black',color:"white",fontFamily:'italic',borderColor:'#1de9b6',marginLeft:'75%'}}>OK</button>
+        </div>
+      )}
     </CoverLayout>
   );
 };

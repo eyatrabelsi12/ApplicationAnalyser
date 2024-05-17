@@ -1,34 +1,73 @@
+require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const { Pool } = require('pg');
+const jwt = require('jsonwebtoken');
 
 const app = express();
-const PORT = 3008;
+const PORT = process.env.PORT || 3008;
 
 app.use(bodyParser.json({ limit: '500mb' }));
 app.use(bodyParser.urlencoded({ limit: '500mb', extended: true }));
 
-
 app.use((req, res, next) => {
-  const allowedOrigins = ['http://localhost:3000', 'http://localhost:3001'];
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  }
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  next();
+    const allowedOrigins = ['http://localhost:3000', 'http://localhost:3001'];
+    const origin = req.headers.origin;
+    if (allowedOrigins.includes(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+    }
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    next();
 });
-
 
 const pool = new Pool({
-  user: 'postgres',
-  host: 'localhost',
-  database: 'projet',
-  password: 'eya',
-  port: 5432
+    connectionString: process.env.DATABASE_URL,
 });
+
+// Middleware pour vérifier le token JWT
+const verifyToken = (req, res, next) => {
+  const token = req.headers.authorization;
+  if (!token) return res.status(401).json({ message: 'No token provided' });
+
+  const tokenParts = token.split(' ');
+  if (tokenParts.length !== 2 || tokenParts[0] !== 'Bearer') {
+    return res.status(401).json({ message: 'Invalid token format' });
+  }
+
+  const accessToken = tokenParts[1];
+
+  jwt.verify(accessToken, process.env.JWT_SECRET, (err, decoded) => {
+    if (err) {
+      if (err.name === 'JsonWebTokenError') {
+        return res.status(401).json({ message: 'Invalid token' });
+      } else {
+        return res.status(403).json({ message: 'Failed to authenticate token' });
+      }
+    }
+    req.user = decoded;
+    next();
+  });
+};
+
+app.post('/automated', verifyToken, async (req, res) => {
+  const { scenario, testCases, bugsOnJira, selectedSprint, fauxBugsNumber, suite } = req.body;
+  const { user_id, username, role } = req.user;
+
+  try {
+      const result = await pool.query(
+        'INSERT INTO automated_data (scenario, test_cases, bugs_on_jira, selected_sprint, suite, user_id, username, faux_bugs) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+        [scenario, testCases, bugsOnJira, selectedSprint, suite, user_id, username, fauxBugsNumber]
+      );
+      const insertedData = result.rows[0];
+      res.status(200).json({ success: true, message: 'Data inserted successfully', data: insertedData });
+  } catch (error) {
+      console.error('Error inserting data:', error);
+      res.status(500).json({ success: false, message: 'An error occurred while inserting data' });
+  }
+});
+
 app.post('/insert-data', async (req, res) => {
   try {
     if (!req.body.fileName || !req.body.file || !req.body.buildHash || !req.body.type) {
@@ -88,6 +127,8 @@ app.post('/delete-data', (req, res) => {
 });
 
 
+
+
 app.post('/submit-data', (req, res) => {
   const { suiteName, selectedDate } = req.body;
   const query = 'INSERT INTO pipeline_data (suite_name, select_date) VALUES ($1, $2)';
@@ -126,12 +167,12 @@ app.delete('/suite-options/:option', async (req, res) => {
   const optionToDelete = req.params.option;
 
   try {
-    // Exécutez la requête SQL pour supprimer l'option de suite de la base de données
+    // Execute the SQL query to delete the suite option from the database
     const query = 'DELETE FROM pipeline_data WHERE suite_name = $1';
     const values = [optionToDelete];
     const result = await pool.query(query, values);
 
-    // Vérifiez si une ligne a été affectée, ce qui signifie que l'option a été supprimée
+    // Check if a row was affected, indicating that the option was deleted
     if (result.rowCount === 1) {
       res.status(200).json({ success: true, message: 'Option deleted successfully.' });
     } else {
@@ -142,6 +183,7 @@ app.delete('/suite-options/:option', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 //
 
 
@@ -239,182 +281,183 @@ async function checkFileExists(fileName) {
 async function saveDataToDatabase(fileName, fileId, fileData) {
   const client = await pool.connect();
   try {
-      await client.query('BEGIN');
-      const fichierId = fileId;
-      const nomFichier = fileName;
+    await client.query('BEGIN');
+    const fichierId = fileId;
+    const nomFichier = fileName;
 
-      // Récupérer les données Build_hash, build_date, et type du fichier enregistré
-      const fichierQuery = 'SELECT Build_hash, build_date, type, DATE_TRUNC(\'day\', date_enregistrement) AS date_enregistrement FROM fichier_enregistres WHERE fichier_id = $1';
-      const fichierResult = await client.query(fichierQuery, [fichierId]);
-      const { build_hash, build_date, type, date_enregistrement } = fichierResult.rows[0];
+    const fichierQuery = 'SELECT Build_hash, type, DATE_TRUNC(\'day\', date_enregistrement) AS date_enregistrement FROM fichier_enregistres WHERE fichier_id = $1';
+    const fichierResult = await client.query(fichierQuery, [fichierId]);
+    const { build_hash, build_date, type, date_enregistrement } = fichierResult.rows[0];
 
-      for (const scenario of fileData) {
-          if (!scenario.elements || !Array.isArray(scenario.elements)) {
-              continue;
-          }
+    // Convertir la date enregistrée en objet Date et ajouter un jour
+    const dateEnregistrement = new Date(date_enregistrement);
+    dateEnregistrement.setDate(dateEnregistrement.getDate() + 1);
 
-          // Extraction de l'ID du scénario si disponible
-          const scenarioID = scenario.id || "ID non spécifié";
-
-          for (const element of scenario.elements) {
-              const scenarioName = element.name;
-              const scenarioStatus = element.status;
-              const scenarioTags = element.tags.map(tag => tag.name);
-
-              const testQuery = 'INSERT INTO Tests (TestName, fichier_id) VALUES ($1, $2) RETURNING TestID';
-              const testRows = await client.query(testQuery, [scenarioName, fileId]);
-
-              if (testRows.rows.length === 0 || !testRows.rows[0].testid) {
-                  throw new Error("Erreur lors de l'insertion des données: Impossible de récupérer l'ID du test");
-              }
-
-              const testID = testRows.rows[0].testid;
-
-              // Utiliser scenarioID au lieu de scenarioName pour le FeatureName
-              const featureQuery = 'INSERT INTO Features (FeatureName, Description, URI, Line, TestID) VALUES ($1, $2, $3, $4, $5) RETURNING FeatureID, FeatureName';
-              const featureRows = await client.query(featureQuery, [scenarioID, scenario.description || '', scenario.uri || '', scenario.line || null, testID]);
-
-              if (featureRows.rows.length === 0 || !featureRows.rows[0].featureid) {
-                  throw new Error("Erreur lors de l'insertion des données: Impossible de récupérer l'ID de la fonctionnalité");
-              }
-
-              const featureID = featureRows.rows[0].featureid;
-              const featureName = featureRows.rows[0].featurename;
-
-              const tagsQuery = 'INSERT INTO TagsNames (TestID, name_1, name_2, name_3, name_4, name_5, name_6) VALUES ($1, $2, $3, $4, $5, $6, $7)';
-              await client.query(tagsQuery, [testID, scenarioTags[0] || null, scenarioTags[1] || null, scenarioTags[2] || null, scenarioTags[3] || null, scenarioTags[4] || null, scenarioTags[5] || null]);
-
-              const tagIDQuery = 'SELECT TagID FROM TagsNames WHERE TestID = $1';
-              const tagIDResult = await client.query(tagIDQuery, [testID]);
-              const tagID = tagIDResult.rows[0].tagid;
-
-              for (const step of element.steps) {
-                  const { keyword, name, result, embeddings } = step;
-                  const { status, duration, error_message } = result || { status: null, duration: null, error_message: null };
-
-                  let stepID = null; // Initialiser stepID à null
-
-                  if (status !== null) {
-                      const scenarioStepsQuery = 'INSERT INTO Steps (TestID, StepKeyword, StepName, StepStatus, duration, error_message) VALUES ($1, $2, $3, $4, $5, $6) RETURNING StepID';
-                      const stepRows = await client.query(scenarioStepsQuery, [testID, keyword, name, status, duration, error_message]);
-                      stepID = stepRows.rows[0].stepid;
-                  }
-
-                  if (Array.isArray(embeddings)) {
-                      // Initialiser les variables pour les deux types de données
-                      let textDate = null;
-                      let imageData = null;
-                      let mimeTypes = [];
-
-                      // Parcourir chaque embedding
-                      for (const embedding of embeddings) {
-                          const { data, mime_type } = embedding;
-                          mimeTypes.push(mime_type);
-
-                          // Vérifier le type MIME pour décider quelle variable mettre à jour
-                          if (mime_type === 'text/plain') {
-                              textDate = data;
-                          } else if (mime_type === 'image/png') {
-                              imageData = data;
-                          }
-                      }
-
-                      // Insérer les données dans la table Embeddings
-                      const embeddingInsertQuery = 'INSERT INTO Embeddings (StepID, Mime_Type, TextDate, ImageData) VALUES ($1, $2, $3, $4) RETURNING EmbeddingID';
-                      const embeddingInsertResult = await client.query(embeddingInsertQuery, [stepID, mimeTypes.join(', '), textDate, imageData]);
-                      const embeddingID = embeddingInsertResult.rows[0].embeddingid;
-
-                      // Insertion dans la table scenarios avec les données Build_hash, build_date, et type récupérées
-                      const scenariosQuery = 'INSERT INTO scenarios (TestID, TestName, StepID, StepKeyword, StepName, StepStatus, TagID, name_1, name_2, name_3, name_4, name_5, name_6, EmbeddingID, Mime_Type, duration, fichier_id, nom_fichier, TextDate, ImageData, FeatureID, FeatureName, Build_hash, build_date, date_enregistrement, type, nom_fichier_concatiner) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)';
-                      await client.query(scenariosQuery, [
-                          testID,
-                          scenarioName,
-                          stepID,
-                          keyword,
-                          name,
-                          status,
-                          tagID,
-                          scenarioTags[0],
-                          scenarioTags[1],
-                          scenarioTags[2],
-                          scenarioTags[3],
-                          scenarioTags[4],
-                          scenarioTags[5],
-                          embeddingID,
-                          mimeTypes.join(', '),
-                          duration,
-                          fichierId,
-                          nomFichier,
-                          textDate,
-                          imageData,
-                          featureID, // Ajout du FeatureID récupéré
-                          featureName, // Ajout du FeatureName récupéré
-                          build_hash, // Ajout de Build_hash récupéré
-                          build_date, // Ajout de build_date récupéré
-                          date_enregistrement, // Ajout de date_enregistrement récupéré
-                          type, // Ajout de type récupéré
-                          `${type}_${
-                              scenarioTags.includes('@WEB-UI') ? 'WEB-UI ' :
-                              scenarioTags.includes('@Data_Management') ? 'Data_Management ' :
-                              scenarioTags.includes('@REST') ? 'REST ' :
-                              scenarioTags.includes('@Navigation') ? 'Navigation ' :
-                              (scenarioTags.some(tag => ['@Data_Management','@WEB-UI', '@REST', '@Navigation'].includes(tag)) ? scenarioTags.find(tag => ['@Data_Management','@WEB-UI', '@REST', '@Navigation'].includes(tag)).replace('@', '') : null)
-                          }_${date_enregistrement.toISOString().slice(0,10).split('-').reverse().join('-')}_${build_hash}.json`
-                      ]);
-                  } else { // Si embeddings est null
-                      // Insertion dans la table Embeddings avec des valeurs null pour Data et Mime_Type
-                      const embeddingInsertQuery = 'INSERT INTO Embeddings (StepID, Mime_Type, TextDate, ImageData) VALUES ($1, $2, $3, $4) RETURNING EmbeddingID';
-                      const embeddingInsertResult = await client.query(embeddingInsertQuery, [stepID, null, null, null]);
-                      const embeddingID = embeddingInsertResult.rows[0].embeddingid;
-
-                      // Insertion dans la table scenarios avec EmbeddingID à null et les données Build_hash, build_date, et type récupérées
-                      const scenariosQuery = 'INSERT INTO scenarios (TestID, TestName, StepID, StepKeyword, StepName, StepStatus, TagID, name_1, name_2, name_3, name_4, name_5, name_6, EmbeddingID, Mime_Type, duration, fichier_id, nom_fichier, TextDate, ImageData, FeatureID, FeatureName, Build_hash, build_date, date_enregistrement, type, nom_fichier_concatiner) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)';
-                      await client.query(scenariosQuery, [
-                          testID,
-                          scenarioName,
-                          stepID,
-                          keyword,
-                          name,
-                          status,
-                          tagID,
-                          scenarioTags[0],
-                          scenarioTags[1],
-                          scenarioTags[2],
-                          scenarioTags[3],
-                          scenarioTags[4],
-                          scenarioTags[5],
-                          null, // Utiliser NULL pour EmbeddingID
-                          null, // Utiliser NULL pour Mime_Type
-                          duration,
-                          fichierId,
-                          nomFichier,
-                          null, // Utiliser NULL pour TextData
-                          null, // Utiliser NULL pour ImageData
-                          featureID, // Ajout du FeatureID récupéré
-                          featureName, // Ajout du FeatureName récupéré
-                          build_hash, // Ajout de Build_hash récupéré
-                          build_date, // Ajout de build_date récupéré
-                          date_enregistrement, // Ajout de date_enregistrement récupéré
-                          type, // Ajout de type récupéré
-                          `${type}_${
-                              scenarioTags.includes('@WEB-UI') ? 'WEB-UI ' :
-                              scenarioTags.includes('@Data_Management') ? 'Data_Management ' :
-                              scenarioTags.includes('@REST') ? 'REST ' :
-                              scenarioTags.includes('@Navigation') ? 'Navigation ' :
-                              (scenarioTags.some(tag => ['@Data_Management','@WEB-UI', '@REST', '@Navigation'].includes(tag)) ? scenarioTags.find(tag => ['@Data_Management','@WEB-UI', '@REST', '@Navigation'].includes(tag)).replace('@', '') : null)
-                          }_${date_enregistrement.toISOString().slice(0,10).split('-').reverse().join('-')}_${build_hash}.json`
-                      ]);
-                  }
-              }
-          }
+    for (const scenario of fileData) {
+      if (!scenario.elements || !Array.isArray(scenario.elements)) {
+        continue;
       }
+      const scenarioID = scenario.id || "ID non spécifié";
 
-      await client.query('COMMIT');
+      for (const element of scenario.elements) {
+        const scenarioName = element.name;
+        const scenarioStatus = element.status;
+        const scenarioTags = element.tags.map(tag => tag.name);
+
+        const testQuery = 'INSERT INTO Tests (TestName, fichier_id) VALUES ($1, $2) RETURNING TestID';
+        const testRows = await client.query(testQuery, [scenarioName, fileId]);
+
+        if (testRows.rows.length === 0 || !testRows.rows[0].testid) {
+          throw new Error("Erreur lors de l'insertion des données: Impossible de récupérer l'ID du test");
+        }
+
+        const testID = testRows.rows[0].testid;
+
+        const featureQuery = 'INSERT INTO Features (FeatureName, Description, URI, Line, TestID) VALUES ($1, $2, $3, $4, $5) RETURNING FeatureID, FeatureName';
+        const featureRows = await client.query(featureQuery, [scenarioID, scenario.description || '', scenario.uri || '', scenario.line || null, testID]);
+
+        if (featureRows.rows.length === 0 || !featureRows.rows[0].featureid) {
+          throw new Error("Erreur lors de l'insertion des données: Impossible de récupérer l'ID de la fonctionnalité");
+        }
+
+        const featureID = featureRows.rows[0].featureid;
+        const featureName = featureRows.rows[0].featurename;
+
+        const tagsQuery = 'INSERT INTO TagsNames (TestID, name_1, name_2, name_3, name_4, name_5, name_6) VALUES ($1, $2, $3, $4, $5, $6, $7)';
+        await client.query(tagsQuery, [testID, scenarioTags[0] || null, scenarioTags[1] || null, scenarioTags[2] || null, scenarioTags[3] || null, scenarioTags[4] || null, scenarioTags[5] || null]);
+
+        const tagIDQuery = 'SELECT TagID FROM TagsNames WHERE TestID = $1';
+        const tagIDResult = await client.query(tagIDQuery, [testID]);
+        const tagID = tagIDResult.rows[0].tagid;
+
+        for (const step of element.steps) {
+          const { keyword, name, result, embeddings } = step;
+          const { status, duration, error_message } = result || { status: null, duration: null, error_message: null };
+
+          let stepID = null;
+
+          if (status !== null) {
+            const scenarioStepsQuery = 'INSERT INTO Steps (TestID, StepKeyword, StepName, StepStatus, duration, error_message) VALUES ($1, $2, $3, $4, $5, $6) RETURNING StepID';
+            const stepRows = await client.query(scenarioStepsQuery, [testID, keyword, name, status, duration, error_message]);
+            stepID = stepRows.rows[0].stepid;
+          }
+
+          if (Array.isArray(embeddings)) {
+            let textDate = null;
+            let imageData = null;
+            let mimeTypes = [];
+
+            for (const embedding of embeddings) {
+              const { data, mime_type } = embedding;
+              mimeTypes.push(mime_type);
+
+              if (mime_type === 'text/plain') {
+                textDate = data;
+              } else if (mime_type === 'image/png') {
+                imageData = data;
+              }
+            }
+
+            const embeddingInsertQuery = 'INSERT INTO Embeddings (StepID, Mime_Type, TextDate, ImageData) VALUES ($1, $2, $3, $4) RETURNING EmbeddingID';
+            const embeddingInsertResult = await client.query(embeddingInsertQuery, [stepID, mimeTypes.join(', '), textDate, imageData]);
+            const embeddingID = embeddingInsertResult.rows[0].embeddingid;
+
+            const scenariosQuery = 'INSERT INTO scenarios (TestID, TestName, StepID, StepKeyword, StepName, StepStatus, TagID, name_1, name_2, name_3, name_4, name_5, name_6, EmbeddingID, Mime_Type, duration, fichier_id, nom_fichier, TextDate, ImageData, FeatureID, FeatureName, Build_hash, date_enregistrement, type, nom_fichier_concatiner) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26) RETURNING nom_fichier_concatiner';
+            const scenariosResult = await client.query(scenariosQuery, [
+              testID,
+              scenarioName,
+              stepID,
+              keyword,
+              name,
+              status,
+              tagID,
+              scenarioTags[0],
+              scenarioTags[1],
+              scenarioTags[2],
+              scenarioTags[3],
+              scenarioTags[4],
+              scenarioTags[5],
+              embeddingID,
+              mimeTypes.join(', '),
+              duration,
+              fichierId,
+              nomFichier,
+              textDate,
+              imageData,
+              featureID,
+              featureName,
+              build_hash,
+              dateEnregistrement, // Utilisation de la date ajustée
+              type,
+              `${type}_${
+                scenarioTags.includes('@WEB-UI') ? 'WEB-UI' :
+                scenarioTags.includes('@Data_Management') ? 'Data_Management' :
+                scenarioTags.includes('@REST') ? 'REST' :
+                scenarioTags.includes('@Navigation') ? 'Navigation' :
+                (scenarioTags.some(tag => ['@Data_Management','@WEB-UI', '@REST', '@Navigation'].includes(tag)) ? scenarioTags.find(tag => ['@Data_Management','@WEB-UI', '@REST', '@Navigation'].includes(tag)).replace('@', '') : null)
+              }_${dateEnregistrement.toISOString().slice(0,10).split('-').reverse().join('-')}_${build_hash}.json`
+            ]);
+
+            const nomFichierConcatiner = scenariosResult.rows[0].nom_fichier_concatiner;
+
+            const updateFichierQuery = 'UPDATE fichier_enregistres SET nom_fichier_concatiner = $1 WHERE fichier_id = $2';
+            await client.query(updateFichierQuery, [nomFichierConcatiner, fichierId]);
+          } else {
+            const embeddingInsertQuery = 'INSERT INTO Embeddings (StepID, Mime_Type, TextDate, ImageData) VALUES ($1, $2, $3, $4) RETURNING EmbeddingID';
+            const embeddingInsertResult = await client.query(embeddingInsertQuery, [stepID, null, null, null]);
+            const embeddingID = embeddingInsertResult.rows[0].embeddingid;
+
+            const scenariosQuery = 'INSERT INTO scenarios (TestID, TestName, StepID, StepKeyword, StepName, StepStatus, TagID, name_1, name_2, name_3, name_4, name_5, name_6, EmbeddingID, Mime_Type, duration, fichier_id, nom_fichier, TextDate, ImageData, FeatureID, FeatureName, Build_hash,date_enregistrement, type, nom_fichier_concatiner) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26) RETURNING nom_fichier_concatiner';
+            const scenariosResult = await client.query(scenariosQuery, [
+              testID,
+              scenarioName,
+              stepID,
+              keyword,
+              name,
+              status,
+              tagID,
+              scenarioTags[0],
+              scenarioTags[1],
+              scenarioTags[2],
+              scenarioTags[3],
+              scenarioTags[4],
+              scenarioTags[5],
+              null,
+              null,
+              duration,
+              fichierId,
+              nomFichier,
+              null,
+              null,
+              featureID,
+              featureName,
+              build_hash,
+              dateEnregistrement, // Utilisation de la date ajustée
+              type,
+              `${type}_${
+                scenarioTags.includes('@WEB-UI') ? 'WEB-UI' :
+                scenarioTags.includes('@Data_Management') ? 'Data_Management' :
+                scenarioTags.includes('@REST') ? 'REST' :
+                scenarioTags.includes('@Navigation') ? 'Navigation' :
+                (scenarioTags.some(tag => ['@Data_Management','@WEB-UI', '@REST', '@Navigation'].includes(tag)) ? scenarioTags.find(tag => ['@Data_Management','@WEB-UI', '@REST', '@Navigation'].includes(tag)).replace('@', '') : null)
+              }_${dateEnregistrement.toISOString().slice(0,10).split('-').reverse().join('-')}_${build_hash}.json`
+            ]);
+
+            const nomFichierConcatiner = scenariosResult.rows[0].nom_fichier_concatiner;
+
+            const updateFichierQuery = 'UPDATE fichier_enregistres SET nom_fichier_concatiner = $1 WHERE fichier_id = $2';
+            await client.query(updateFichierQuery, [nomFichierConcatiner, fichierId]);
+          }
+        }
+      }
+    }
+
+    await client.query('COMMIT');
   } catch (error) {
-      await client.query('ROLLBACK');
-      throw new Error(`Erreur lors de l'enregistrement des données dans la base de données : ${error.message}`);
+    await client.query('ROLLBACK');
+    throw new Error(`Erreur lors de l'enregistrement des données dans la base de données : ${error.message}`);
   } finally {
-      client.release();
+    client.release();
   }
 }
 
@@ -422,15 +465,80 @@ async function saveDataToDatabase(fileName, fileId, fileData) {
 async function saveFileNameToDatabase(fileName, buildHash, type) {
   const client = await pool.connect();
   try {
-    const query = 'INSERT INTO fichier_enregistres (nom_fichier, build_hash, type) VALUES ($1, $2, $3) RETURNING fichier_id';
-    const result = await client.query(query, [fileName, buildHash,type]);
-    return result.rows[0].fichier_id;
+      await client.query('BEGIN');
+
+      const query = 'INSERT INTO fichier_enregistres (nom_fichier, build_hash, type) VALUES ($1, $2, $3) RETURNING fichier_id';
+      const result = await client.query(query, [fileName, buildHash, type]);
+      const fileId = result.rows[0].fichier_id;
+
+      const updateQuery = `
+      UPDATE fichier_enregistres
+      SET nom_fichier_concatiner = (
+          SELECT s.nom_fichier_concatiner
+          FROM scenarios s
+          WHERE s.fichier_id = fichier_enregistres.fichier_id
+          LIMIT 1
+      )
+      WHERE EXISTS (
+          SELECT 1
+          FROM scenarios s
+          WHERE s.fichier_id = fichier_enregistres.fichier_id
+      );
+      `;
+      await client.query(updateQuery, [fileId]);
+
+      await client.query('COMMIT');
+
+      return fileId;
   } catch (error) {
-    throw new Error(`Erreur lors de l'enregistrement du nom de fichier dans la base de données : ${error.message}`);
+      await client.query('ROLLBACK');
+      throw new Error(`Erreur lors de l'enregistrement du nom de fichier dans la base de données : ${error.message}`);
   } finally {
-    client.release();
+      client.release();
   }
 }
+
+
+
+async function saveFileNameToDatabase(fileName, buildHash, type) {
+  const client = await pool.connect();
+  try {
+      await client.query('BEGIN');
+
+      // Insérer dans la table fichier_enregistres
+      const query = 'INSERT INTO fichier_enregistres (nom_fichier, build_hash, type) VALUES ($1, $2, $3) RETURNING fichier_id';
+      const result = await client.query(query, [fileName, buildHash, type]);
+      const fileId = result.rows[0].fichier_id;
+
+      // Mettre à jour nom_fichier_concatiner en utilisant les données de la table scenarios
+      const updateQuery = `
+          UPDATE fichier_enregistres
+          SET nom_fichier_concatiner = (
+              SELECT s.nom_fichier_concatiner
+              FROM scenarios s
+              WHERE s.fichier_id = fichier_enregistres.fichier_id
+              LIMIT 1
+          )
+          WHERE EXISTS (
+              SELECT 1
+              FROM scenarios s
+              WHERE s.fichier_id = fichier_enregistres.fichier_id
+          );
+      `;
+      await client.query(updateQuery, []);
+
+      await client.query('COMMIT');
+
+      return fileId;
+  } catch (error) {
+      await client.query('ROLLBACK');
+      throw new Error(`Erreur lors de l'enregistrement du nom de fichier dans la base de données : ${error.message}`);
+  } finally {
+      client.release();
+  }
+}
+
+
  
 
 
@@ -545,7 +653,7 @@ const formatFileName = (originalFileName) => {
         const { nom_fichier } = req.body;
  
         // Récupérer le fichier_id associé au nom du fichier
-        const fileIdQuery = 'SELECT fichier_id FROM fichier_enregistres WHERE nom_fichier = $1';
+        const fileIdQuery = 'SELECT fichier_id FROM fichier_enregistres WHERE nom_fichier_concatiner = $1';
         const fileIdResult = await pool.query(fileIdQuery, [nom_fichier]);
         const formattedFileName = formatFileName(nom_fichier);
  
@@ -750,7 +858,7 @@ app.get('/features/distinct', async (req, res) => {
         FROM Features f
         INNER JOIN Scenarios s ON f.TestID = s.TestID
         LEFT JOIN TagsNames tn ON f.TestID = tn.TestID
-        WHERE s.nom_fichier IN ($1, $2)
+        WHERE s.nom_fichier_concatiner IN ($1, $2)
       `;
       
       const sqlQuery = `
@@ -763,7 +871,7 @@ app.get('/features/distinct', async (req, res) => {
         INNER JOIN
           scenarios s2 ON s1.name_1 = s2.name_1
         WHERE
-          s1.nom_fichier=$1 AND s2.nom_fichier=$2 
+          s1.nom_fichier_concatiner=$1 AND s2.nom_fichier_concatiner=$2 
           AND (
             (s1.StepStatus = 'passed' AND s2.StepStatus = 'passed')
             OR (s1.StepStatus = 'passed' AND s2.StepStatus = 'failed')
@@ -775,21 +883,19 @@ app.get('/features/distinct', async (req, res) => {
       const CountQuery = `
         SELECT
           s.featurename,
-          s.nom_fichier,
+          s.nom_fichier_concatiner,
           COUNT(DISTINCT CASE WHEN s.stepstatus = 'passed' THEN s.featurename END) AS total_passed,
           COUNT(DISTINCT CASE WHEN s.stepstatus = 'failed' THEN s.featurename END) AS total_failed,
           COUNT(DISTINCT CASE WHEN s.stepstatus = 'skipped' THEN s.featurename END) AS total_skipped,
           COUNT(DISTINCT CASE WHEN s.stepstatus = 'pending' THEN s.featurename END) AS total_pending
         FROM
           scenarios s
-        INNER JOIN
-          fichier_enregistres fe ON s.nom_fichier = fe.nom_fichier
         WHERE
-          s.nom_fichier IN ($1, $2)
+          s.nom_fichier_concatiner IN ($1, $2)
         GROUP BY
-          s.featurename, s.nom_fichier;
+          s.featurename, s.nom_fichier_concatiner;
       `;
-
+  
       const resultCount = await client.query(CountQuery, [fileName1, fileName2]);
       const featureCounts = resultCount.rows.reduce((acc, row) => {
         const featureName = row.featurename;
@@ -823,35 +929,49 @@ app.get('/features/distinct', async (req, res) => {
     } finally {
       client.release();
     }
+  }
+  
+// Fonction de conversion de date avec suppression des secondes et des millisecondes
+function convertDate(dateString) {
+  const date = new Date(dateString);
+ 
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+ 
+  const formattedDate = `${year}${month}${day}-00${hours}${minutes}`;
+  return formattedDate;
 }
-
   
 async function getTestNamesForFeature(featureName, file1, file2) {
   const client = await pool.connect();
   try {
     const query = `
     WITH StepStatus AS (
-      SELECT 
+      SELECT
           tn.TestID,
-          fe.nom_fichier,
+          fe.nom_fichier_concatiner,
+          fe.type,
           CASE
               WHEN 'failed' IN (
-                  SELECT s.StepStatus 
-                  FROM Steps s 
+                  SELECT s.StepStatus
+                  FROM Steps s
                   WHERE s.TestID = tn.TestID
               ) THEN 'failed'
               WHEN EXISTS (
                   SELECT 1
-                  FROM Steps s 
+                  FROM Steps s
                   WHERE s.TestID = tn.TestID
                     AND s.StepStatus = 'pending'
               ) THEN 'pending'
               WHEN 'skipped' IN (
-                  SELECT s.StepStatus 
-                  FROM Steps s 
+                  SELECT s.StepStatus
+                  FROM Steps s
                   WHERE s.TestID = tn.TestID
-              ) THEN 
-                  CASE 
+              ) THEN
+                  CASE
                       WHEN EXISTS (
                           SELECT 1
                           FROM Steps sp
@@ -862,25 +982,29 @@ async function getTestNamesForFeature(featureName, file1, file2) {
                   END
               ELSE 'passed'
           END AS StepStatus
-      FROM 
+      FROM
           TagsNames tn
       INNER JOIN
           Tests t ON tn.TestID = t.TestID
       INNER JOIN
           fichier_enregistres fe ON t.fichier_id = fe.fichier_id
   )
-  SELECT 
-      f.FeatureName, 
+  SELECT
+      f.FeatureName,
       ARRAY_AGG(
-          CASE 
+          CASE
               WHEN tag.name_3 LIKE '@DHRD-%' THEN tag.name_3
               WHEN tag.name_4 LIKE '@DHRD-%' THEN tag.name_4
           END
       ) AS TestNames,
       ARRAY_AGG(t.TestName) AS TestName,
-      MAX(CASE WHEN fe.nom_fichier = $2 THEN ss.StepStatus END) AS StepStatusFile1,
-      MAX(CASE WHEN fe.nom_fichier = $3 THEN ss.StepStatus END) AS StepStatusFile2
-  FROM 
+      MAX(CASE WHEN fe.nom_fichier_concatiner = $2 THEN ss.StepStatus END) AS StepStatusFile1,
+      MAX(CASE WHEN fe.nom_fichier_concatiner = $3 THEN ss.StepStatus END) AS StepStatusFile2,
+      (SELECT fe.type FROM fichier_enregistres fe WHERE fe.nom_fichier_concatiner = $2) AS FileTypeFile1,
+      (SELECT fe.type FROM fichier_enregistres fe WHERE fe.nom_fichier_concatiner = $3) AS FileTypeFile2,
+      (SELECT textdate FROM scenarios WHERE fichier_id = (SELECT fichier_id FROM fichier_enregistres WHERE nom_fichier_concatiner = $2) AND textdate IS NOT NULL AND textdate ~* '\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z' ORDER BY textdate LIMIT 1) AS DateFile1,
+      (SELECT textdate FROM scenarios WHERE fichier_id = (SELECT fichier_id FROM fichier_enregistres WHERE nom_fichier_concatiner = $3) AND textdate IS NOT NULL AND textdate ~* '\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z' ORDER BY textdate LIMIT 1) AS DateFile2
+  FROM
       Features f
   INNER JOIN
       Tests t ON f.TestID = t.TestID
@@ -890,26 +1014,31 @@ async function getTestNamesForFeature(featureName, file1, file2) {
       fichier_enregistres fe ON fe.fichier_id = t.fichier_id
   INNER JOIN
       StepStatus ss ON ss.TestID = t.TestID
-  WHERE 
-      f.FeatureName = $1 AND fe.nom_fichier IN ($2, $3)
-  GROUP BY 
+  WHERE
+      f.FeatureName = $1 AND fe.nom_fichier_concatiner IN ($2, $3)
+  GROUP BY
       f.FeatureName, t.TestName;
-  
+ 
 `;
-
-
+ 
+ 
       const result = await client.query(query, [featureName, file1, file2]);
       return result.rows.map(row => ({
           featureName: row.featurename,
           testNames: row.testnames.filter(name => name), // Filtrer les noms null
           testName: row.testname.filter(name => name), // Filtrer les noms null
           stepStatusFile1: row.stepstatusfile1,
-          stepStatusFile2: row.stepstatusfile2
+          stepStatusFile2: row.stepstatusfile2,
+          fileTypeFile1: row.filetypefile1,
+          fileTypeFile2: row.filetypefile2,
+          dateFile1: convertDate(row.datefile1),
+          dateFile2: convertDate(row.datefile2)
       }));
   } finally {
       client.release();
   }
 }
+ 
 
 
 
@@ -935,20 +1064,9 @@ app.get('/file-info', async (req, res) => {
   }
 });
 // Côté serveur
-app.post('/automated', async (req, res) => {
-  const { scenario, testCases, bugsOnJira, selectedSprint, fauxBugsNumber, suite } = req.body;
-  try {
-    const result = await pool.query(
-      'INSERT INTO automated_data (scenario, test_cases, bugs_on_jira, selected_sprint, faux_bugs, suite) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-      [scenario, testCases, bugsOnJira, selectedSprint, fauxBugsNumber, suite]
-    );
-    const insertedData = result.rows[0]; // Récupérez les données insérées depuis la réponse de la base de données
-    res.status(200).json({ success: true, message: 'Data inserted successfully', data: insertedData });
-  } catch (error) {
-    console.error('Error inserting data:', error);
-    res.status(500).json({ success: false, message: 'An error occurred while inserting data' });
-  }
-});
+
+
+
 app.get('/automated', async (req, res) => {
   try {
     // Exécutez une requête SQL SELECT pour récupérer toutes les données de la table automated_data
@@ -1088,7 +1206,7 @@ async function getFileInfo(fileName1, fileName2) {
       const fileInfoQuery = `
       SELECT DISTINCT
       fichier_Id,
-      nom_fichier,
+      nom_fichier_concatiner,
       CONCAT(first_type.type, ' ') AS type,
       CASE
           WHEN first_type.name_3 = '@WEB-UI' THEN 'WEB-UI Automated Tests'
@@ -1132,13 +1250,13 @@ async function getFileInfo(fileName1, fileName2) {
   FROM (
       SELECT
           fichier_Id,
-          nom_fichier,
+          nom_fichier_concatiner,
           type,
           name_2,
           name_3,
-          ROW_NUMBER() OVER(PARTITION BY nom_fichier, fichier_Id ORDER BY TestID) AS rn
+          ROW_NUMBER() OVER(PARTITION BY nom_fichier_concatiner, fichier_Id ORDER BY TestID) AS rn
       FROM scenarios
-      WHERE nom_fichier IN ($1, $2)
+      WHERE nom_fichier_concatiner IN ($1, $2)
   ) AS first_type
   WHERE first_type.rn = 1;
  
@@ -1147,7 +1265,7 @@ async function getFileInfo(fileName1, fileName2) {
       const result = await client.query(fileInfoQuery, [fileName1, fileName2]);
       return result.rows.map(row => ({
           fichier_Id: row.fichier_id,
-          nom_fichier: row.nom_fichier,
+          nom_fichier_concatiner: row.nom_fichier_concatiner,
           type: row.type,
           tag: row.tag,
           total_testnames: row.total_testnames,

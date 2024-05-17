@@ -96,10 +96,10 @@ const routes = [
   },
   {
     type: "collapse",
-    name: "Management_Suite",
-    key: "Management_Suite",
+    name: "ManagementSuite",
+    key: "ManagementSuite",
     icon: <Icon fontSize="small"><PlaylistAddIcon /></Icon>, 
-    route: "/Management_Suite",
+    route: "/ManagementSuite",
     component: <Pipeline />,
   },
   
@@ -110,6 +110,14 @@ const routes = [
     icon: <Icon fontSize="small"><ExitToAppIcon /></Icon>,
     route: "/authentication/sign-in",
     component: <SignUp />,
+  },
+  {
+    type: '',
+    name: '',
+    key: 'reset-password',
+    icon: <Icon fontSize="small">refresh</Icon>,
+    route: '/reset-password/:token',
+    component: <ResetPassword />,
   },
 ];
 

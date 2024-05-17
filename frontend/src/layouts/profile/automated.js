@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+
 import Grid from "@mui/material/Grid";
 import FormControl from "@mui/material/FormControl";
 import TextField from "@mui/material/TextField";
@@ -26,6 +27,14 @@ function Automated() {
   const [selectedSprint, setSelectedSprint] = useState("");
   const [suite, setsuite] = useState("");
   const [fauxBugsNumber, setFauxBugsNumber] = useState("");
+  const [token, setToken] = useState("");
+  useEffect(() => {
+    // Ici, vous pouvez récupérer le token JWT stocké localement, par exemple depuis localStorage ou sessionStorage
+    const storedToken = localStorage.getItem("token");
+    if (storedToken) {
+      setToken(storedToken);
+    }
+  }, []);
 
   const handleScenarioChange = (event) => {
     setScenario(event.target.value);
@@ -54,10 +63,12 @@ function Automated() {
       setFauxBugsNumber(value);
     }
   };
-
+  
   const handleSubmitForm = async (event) => {
     event.preventDefault();
-    
+
+  
+  
     // Vérifier si tous les champs sont remplis
     if (scenario && testCases && bugsOnJira && selectedSprint && suite && fauxBugsNumber) {
       try {
@@ -65,6 +76,7 @@ function Automated() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
           },
           body: JSON.stringify({
             scenario,
@@ -82,7 +94,14 @@ function Automated() {
   
         const data = await response.json();
         if (data.success) {
-          alert("Data submitted successfully");
+          const alertDiv = document.createElement('div');
+          alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 50%; transform: translate(-50%, -50%); padding: 20px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
+          alertDiv.innerHTML = `
+          Data submitted successfully
+            <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
+          `;
+          document.body.appendChild(alertDiv);
+  
           // Réinitialiser les champs du formulaire après la soumission réussie
           setScenario("");
           setTestCases("");
@@ -95,12 +114,25 @@ function Automated() {
         }
       } catch (error) {
         console.error("Error submitting data:", error.message);
-        alert("An error occurred while submitting data");
+        const alertDiv = document.createElement('div');
+        alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 50%; transform: translate(-50%, -50%); padding: 20px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
+        alertDiv.innerHTML = `
+          Une erreur s'est produite lors de la soumission des données
+          <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
+        `;
+        document.body.appendChild(alertDiv);
       }
     } else {
-      alert("Please fill in all fields.");
+      const alertDiv = document.createElement('div');
+      alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 50%; transform: translate(-50%, -50%); padding: 20px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
+      alertDiv.innerHTML = `
+      Please fill in all fields
+        <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
+      `;
+      document.body.appendChild(alertDiv);
     }
   };
+  
   
 
   return (

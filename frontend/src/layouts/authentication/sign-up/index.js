@@ -9,13 +9,16 @@ import MDButton from "components/MDButton";
 import { FaCheckSquare, FaRegSquare } from 'react-icons/fa'; // Importation des icônes de case à cocher
 import CoverLayout from "layouts/authentication/components/CoverLayout";
 import bgImage from "assets/images/neoxam.jpg";
-
+ 
 const Register = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [registrationError, setRegistrationError] = useState(null);
+ 
   // Fonction pour vérifier les conditions du mot de passe
   const checkPasswordConditions = (password) => {
     const conditions = [
@@ -28,62 +31,111 @@ const Register = () => {
     ];
     return conditions;
   };
-
+ 
   const handleRegister = async (e) => {
     e.preventDefault();
-  
-    // Vérifier si les champs d'entrée sont vides
+ 
     if (!email || !password || !confirmPassword) {
-      alert('Please fill in all fields.');
+      const errorMessage = (
+        <div style={{position: 'fixed', top: '11%', left: '52.1%', transform: 'translate(-50%, -50%)', padding: '20px', backgroundColor: 'rgb(255, 255, 255)', color: 'rgb(0, 0, 0)', borderRadius: '5px', zIndex: '9999', fontFamily: 'italic',width:'25%'}}>
+          Please fill in all fields.
+          <button onClick={() => setRegistrationError(null)} style={{width: '20%', backgroundColor: 'black', color: 'white', fontFamily: 'italic', borderColor: '#1de9b6', marginLeft: '75%'}}>OK</button>
+        </div>
+      );
+      setRegistrationError(errorMessage);
       return;
     }
-  
+ 
     if (password !== confirmPassword) {
-      alert('Passwords do not match.');
+      const errorMessage = (
+        <div style={{position: 'fixed', top: '11%', left: '52.1%', transform: 'translate(-50%, -50%)', padding: '20px', backgroundColor: 'rgb(255, 255, 255)', color: 'rgb(0, 0, 0)', borderRadius: '5px', zIndex: '9999', fontFamily: 'italic',width:'25%'}}>
+          Passwords do not match.
+          <button onClick={() => setRegistrationError(null)} style={{width: '20%', backgroundColor: 'black', color: 'white', fontFamily: 'italic', borderColor: '#1de9b6', marginLeft: '75%'}}>OK</button>
+        </div>
+      );
+      setRegistrationError(errorMessage);
       return;
     }
-  
+ 
     if (password.length < 16) {
-      alert('Password must be at least 16 characters long.');
+      const errorMessage = (
+        <div style={{position: 'fixed', top: '11%', left: '52.1%', transform: 'translate(-50%, -50%)', padding: '20px', backgroundColor: 'rgb(255, 255, 255)', color: 'rgb(0, 0, 0)', borderRadius: '5px', zIndex: '9999', fontFamily: 'italic',width:'25%'}}>
+          Password must be at least 16 characters long.
+          <button onClick={() => setRegistrationError(null)} style={{width: '20%', backgroundColor: 'black', color: 'white', fontFamily: 'italic', borderColor: '#1de9b6', marginLeft: '75%'}}>OK</button>
+        </div>
+      );
+      setRegistrationError(errorMessage);
       return;
     }
-  
+ 
     const conditions = checkPasswordConditions(password);
-  
+ 
     if (!conditions.every(condition => condition.condition)) {
       const unmetConditions = conditions.filter(condition => !condition.condition);
       const unmetMessages = unmetConditions.map(condition => `- ${condition.message}`).join("\n");
-      alert(`Password must meet the requirements. Your password must contain:\n${unmetMessages}`);
+      alertWithBackground(`Password must meet the requirements. Your password must contain:\n${unmetMessages}`);
       return;
     }
-  
+ 
     if (!email.includes('@gmail.com')) {
-      alert('Email must contain "@gmail.com".');
+      alertWithBackground('Email must contain "@gmail.com".');
       return;
     }
-  
+    // Vérifier le nom d'utilisateur
+    const fullName = username.split('@')[0];
+    const usernameValid = fullName.includes('.');
+    if (!usernameValid) {
+      alertWithBackground('Username must be between the first name and last name separated by a dot (.)');
+      return;
+    }
+ 
     const url = 'http://localhost:3003/register';
-    const data = { email, password };
-  
+    const data = { username, email, password };
+ 
     try {
       const response = await axios.post(url, data);
       console.log(response.data);
-      alert('Success! Registered successfully.');
+      alertWithBackground('Success! Registered successfully.');
       navigate('/authentication/sign-in'); // Modifier ici pour rediriger vers la page de connexion
     } catch (error) {
       console.error('Error during registration:', error);
-      alert('Error: Unable to register. Please try again.');
+      alertWithBackground(' Unable to register. Please try again.');
     }
   };
-  
-
  
-
+ 
+ 
   const passwordConditions = checkPasswordConditions(password);
-
+  const alertWithBackground = (message, backgroundColor) => {
+    const alertContainer = document.createElement("div");
+    alertContainer.classList.add("custom-alert");
+    alertContainer.textContent = message;
+    alertContainer.style.backgroundColor = 'white'; // Définir la couleur de fond
+    alertContainer.style.padding = '10px'; // Ajouter un padding pour une meilleure apparence
+    alertContainer.style.color = 'black'; // Définir la couleur du texte pour contraster avec le fond
+    alertContainer.style.borderRadius = '5px'; // Ajouter un peu de bordure arrondie
+    alertContainer.style.marginTop = '-20%';
+    alertContainer.style.fontFamily = 'italic';
+    alertContainer.style.width = '25%';
+    const okButton = document.createElement("button");
+    okButton.textContent = "OK";
+    okButton.style.width = '20%';
+    okButton.style.backgroundColor = 'black';
+    okButton.style.color = 'white';
+    okButton.style.fontFamily = 'italic';
+    okButton.style.borderColor = '#1de9b6';
+    okButton.style.marginLeft = '75%';
+    okButton.addEventListener("click", () => {
+        document.body.removeChild(alertContainer);
+    });
+   
+    alertContainer.appendChild(okButton);
+    document.body.appendChild(alertContainer);
+};
+ 
   return (
     <CoverLayout image={bgImage}>
-      <Card style={{ marginTop: '-143px' ,marginRight:'-18%'}}  >
+      <Card style={{ marginTop: '-125px' ,marginRight:'-18%'}}  >
         <MDBox
           variant="gradient"
           bgColor="success"
@@ -103,10 +155,20 @@ const Register = () => {
             Enter your email and password to register
           </MDTypography>
         </MDBox>
-        <MDBox pt={0.1} pb={0} px={3}>
-
+        <MDBox pt={1} pb={0} px={3}>
+ 
           <MDBox component="form" role="form" onSubmit={handleRegister}>
-          <MDBox mb={3} style={{ position: 'relative' }}>
+          <MDBox mb={1}>
+              <MDInput
+                type="Username"
+                label="Username"
+                fullWidth
+                placeholder="Username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+              />
+            </MDBox>
+          <MDBox mb={1} style={{ position: 'relative' }}>
   <MDInput
     type="email"
     label="Email"
@@ -115,13 +177,10 @@ const Register = () => {
     value={email}
     onChange={(e) => setEmail(e.target.value)}
   />
-  <span style={{ position: 'absolute', bottom: '-20px', left: '0', color: 'black', fontSize: '12px' }}>
-    Veuillez utiliser un e-mail Gmail.
-  </span>
 </MDBox>
-
-        
-            <MDBox mb={2}>
+ 
+       
+            <MDBox mb={1}>
               <MDInput
                 type="password"
                 label="Password"
@@ -130,10 +189,10 @@ const Register = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
-              
-
+             
+ 
             </MDBox>
-            <MDBox mb={2}>
+            <MDBox mb={1}>
               <MDInput
                 type="password"
                 label="Confirm Password"
@@ -143,6 +202,7 @@ const Register = () => {
                 onChange={(e) => setConfirmPassword(e.target.value)}
               />
             </MDBox>
+           
             {/* Affichage des conditions de mot de passe */}
             <MDBox display="flex" flexDirection="column">
   {passwordConditions.map((condition, index) => (
@@ -175,8 +235,15 @@ const Register = () => {
           </MDBox>
         </MDBox>
       </Card>
+      {registrationSuccess && (
+        <div style={{ position: 'fixed', top: '11%', left: '52.1%', transform: 'translate(-50%, -50%)', padding: '20px', backgroundColor: 'rgb(255, 255, 255)', color: 'rgb(0, 0, 0)', borderRadius: '5px', zIndex: '9999', fontFamily: 'italic' }}>
+          Success! Registered successfully.
+          <button onClick={() => navigate('/authentication/sign-in')} style={{ width: '20%', backgroundColor: 'black', color: "white", fontFamily: 'italic', borderColor: '#1de9b6', marginLeft: '75%' }}>OK</button>
+        </div>
+      )}
+      {registrationError && registrationError}
     </CoverLayout>
   );
 };
-
+ 
 export default Register;
