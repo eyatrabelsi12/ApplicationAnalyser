@@ -1,44 +1,29 @@
-/**
-=========================================================
-* Material Dashboard 2 React - v2.2.0
-=========================================================
-
-* Product Page: https://www.creative-tim.com/product/material-dashboard-react
-* Copyright 2023 Creative Tim (https://www.creative-tim.com)
-
-Coded by www.creative-tim.com
-
- =========================================================
-
-* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-*/
-
 import { useEffect } from "react";
-
+ 
 // react-router-dom components
 import { useLocation, NavLink } from "react-router-dom";
-
+ 
 // prop-types is a library for typechecking of props.
 import PropTypes from "prop-types";
-
+ 
 // @mui material components
 import List from "@mui/material/List";
 import Divider from "@mui/material/Divider";
 import Link from "@mui/material/Link";
 import Icon from "@mui/material/Icon";
-
+ 
 // Material Dashboard 2 React components
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
-
+ 
 // Material Dashboard 2 React example components
 import SidenavCollapse from "examples/Sidenav/SidenavCollapse";
-
+ 
 // Custom styles for the Sidenav
 import SidenavRoot from "examples/Sidenav/SidenavRoot";
 import sidenavLogoLabel from "examples/Sidenav/styles/sidenav";
-
+ 
 // Material Dashboard 2 React context
 import {
   useMaterialUIController,
@@ -46,23 +31,35 @@ import {
   setTransparentSidenav,
   setWhiteSidenav,
 } from "context";
-
+ 
+import { getUserRole } from 'utils/authUtils'; // Importez votre fonction pour obtenir le rôle de l'utilisateur
+ 
 function Sidenav({ color, brand, brandName, routes, ...rest }) {
+  const userRole = getUserRole(); // Obtenez le rôle de l'utilisateur
+ 
+  // Filtrer les routes en fonction du rôle de l'utilisateur
+  const filteredRoutes = routes.filter(route => {
+    if (route.roles && !route.roles.includes(userRole)) {
+      return false;
+    }
+    return true;
+  });
+ 
   const [controller, dispatch] = useMaterialUIController();
   const { miniSidenav, transparentSidenav, whiteSidenav, darkMode, sidenavColor } = controller;
   const location = useLocation();
   const collapseName = location.pathname.replace("/", "");
-
+ 
   let textColor = "white";
-
+ 
   if (transparentSidenav || (whiteSidenav && !darkMode)) {
     textColor = "dark";
   } else if (whiteSidenav && darkMode) {
     textColor = "inherit";
   }
-
+ 
   const closeSidenav = () => setMiniSidenav(dispatch, true);
-
+ 
   useEffect(() => {
     // A function that sets the mini state of the sidenav.
     function handleMiniSidenav() {
@@ -70,23 +67,29 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
       setTransparentSidenav(dispatch, window.innerWidth < 1200 ? false : transparentSidenav);
       setWhiteSidenav(dispatch, window.innerWidth < 1200 ? false : whiteSidenav);
     }
-
-    /** 
+ 
+    /**
      The event listener that's calling the handleMiniSidenav function when resizing the window.
     */
     window.addEventListener("resize", handleMiniSidenav);
-
+ 
     // Call the handleMiniSidenav function to set the state with the initial value.
     handleMiniSidenav();
-
+ 
     // Remove event listener on cleanup
     return () => window.removeEventListener("resize", handleMiniSidenav);
   }, [dispatch, location]);
-
+ 
+  // Si l'utilisateur est sur la page de connexion, ne pas afficher le Sidenav
+  if (location.pathname === "/authentication/sign-in") {
+    return null;
+  }
+ 
   // Render all the routes from the routes.js (All the visible items on the Sidenav)
-  const renderRoutes = routes.map(({ type, name, icon, title, noCollapse, key, href, route }) => {
+  // Fonction de rendu des routes filtrées
+  const renderRoutes = filteredRoutes.map(({ type, name, icon, title, noCollapse, key, href, route }) => {
     let returnValue;
-
+ 
     if (type === "collapse") {
       returnValue = href ? (
         <Link
@@ -136,10 +139,10 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
         />
       );
     }
-
+ 
     return returnValue;
   });
-
+ 
   return (
     <SidenavRoot
       {...rest}
@@ -174,15 +177,16 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
     </SidenavRoot>
   );
 }
-
+ 
 // Setting default values for the props of Sidenav
-
+ 
 // Typechecking props for the Sidenav
 Sidenav.propTypes = {
   color: PropTypes.oneOf(["success"]),
   brand: PropTypes.string,
   brandName: PropTypes.string.isRequired,
   routes: PropTypes.arrayOf(PropTypes.object).isRequired,
+  userRole: PropTypes.string // Ajouter cette ligne
 };
-
+ 
 export default Sidenav;

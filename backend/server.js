@@ -20,7 +20,7 @@ app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     next();
-});
+});1
 
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
@@ -71,36 +71,37 @@ app.post('/automated', verifyToken, async (req, res) => {
 app.post('/insert-data', async (req, res) => {
   try {
     if (!req.body.fileName || !req.body.file || !req.body.buildHash || !req.body.type) {
-        throw new Error('Certains champs requis sont manquants dans la requête.');
+      throw new Error('Certains champs requis sont manquants dans la requête.');
     }
- 
+
     const fileName = req.body.fileName;
     const fileData = req.body.file;
     const buildHash = req.body.buildHash;
     const type = req.body.type;
- 
+
     // Vérifier si le nom de fichier existe déjà dans la table
     const fileExists = await checkFileExists(fileName);
- 
+
     if (fileExists) {
       res.status(409).json({ alert: `Le fichier ${fileName} est déjà stocké dans la base de données.` });
     } else {
       // Enregistrer le nom du fichier dans la table des fichiers enregistrés
       const fileId = await saveFileNameToDatabase(fileName, buildHash, type);
- 
+
       // Continuer avec l'enregistrement des données JSON
       await saveDataToDatabase(fileName, fileId, fileData);
- 
+
       // Calculer les pourcentages
       const percentages = await calculatePercentages(fileId);
- 
-      // Renvoyer les pourcentages au front-end
+
+      // Renvoyer les pourcentages et le nom de fichier concaténé au front-end
       res.status(200).json({
         message: 'Données JSON enregistrées avec succès',
         successPercentage: percentages.successPercentage,
         failurePercentage: percentages.failurePercentage,
         skippedPercentage: percentages.skippedPercentage,
-        pendingPercentage: percentages.pendingPercentage
+        pendingPercentage: percentages.pendingPercentage,
+        concatenatedFileName: percentages.concatenatedFileName
       });
     }
   } catch (error) {
@@ -108,6 +109,7 @@ app.post('/insert-data', async (req, res) => {
     res.status(500).json({ error: 'Erreur interne du serveur : ' + error.message });
   }
 });
+
 
 
 app.post('/delete-data', (req, res) => {
@@ -216,7 +218,6 @@ app.delete('/delete-suite-option/:option', async (req, res) => {
 
 
 
-
 async function calculatePercentages(fileId) {
   try {
     const percentagesQuery = `
@@ -227,38 +228,45 @@ async function calculatePercentages(fileId) {
            + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'skipped')
            + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'pending')))), 'N', 'C', '%') AS passed_percentage,
        
-       CONCAT(FORMAT('%s', ((SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'failed') * 100.0 /
+        CONCAT(FORMAT('%s', ((SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'failed') * 100.0 /
           ((SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'passed')
            + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'failed')
            + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'skipped')
            + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'pending')))), 'N', 'C', '%') AS failed_percentage,
        
-      CONCAT(FORMAT('%s', ((SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'skipped') * 100.0 /
+        CONCAT(FORMAT('%s', ((SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'skipped') * 100.0 /
           ((SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'passed')
            + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'failed')
            + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'skipped')
            + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'pending')))), 'N', 'C', '%') AS skipped_percentage,
        
-      CONCAT(FORMAT('%s', ((SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'pending') * 100.0 /
+        CONCAT(FORMAT('%s', ((SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'pending') * 100.0 /
           ((SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'passed')
            + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'failed')
            + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'skipped')
-           + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'pending')))), 'N', 'C', '%') AS pending_percentage
+           + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'pending')))), 'N', 'C', '%') AS pending_percentage,
+        
+        (SELECT MAX(nom_fichier_concatiner) FROM scenarios WHERE fichier_Id = $1) AS concatenated_file_name
+      FROM scenarios
+      WHERE fichier_Id = $1
+      GROUP BY fichier_Id
     `;
  
     const percentagesResult = await pool.query(percentagesQuery, [fileId]);
-    const { passed_percentage, failed_percentage, skipped_percentage, pending_percentage } = percentagesResult.rows[0];
+    const { passed_percentage, failed_percentage, skipped_percentage, pending_percentage, concatenated_file_name } = percentagesResult.rows[0];
  
     return {
       successPercentage: passed_percentage,
       failurePercentage: failed_percentage,
       skippedPercentage: skipped_percentage,
-      pendingPercentage: pending_percentage
+      pendingPercentage: pending_percentage,
+      concatenatedFileName: concatenated_file_name
     };
   } catch (error) {
     throw new Error(`Erreur lors du calcul des pourcentages : ${error.message}`);
   }
 }
+
 
 
 async function checkFileExists(fileName) {
@@ -769,7 +777,7 @@ WHERE fichier_Id = $1 and stepstatus='pending'
         scenarios
     WHERE
         fichier_Id = $1
-        AND (name_3 = '@WEB-UI' OR name_2 IN ('@Data_Management', '@REST', '@Navigation'))
+        AND (name_3 IN ('@WEB-UI','@Data_Management', '@REST', '@Navigation') OR name_2 IN ('@WEB-UI','@Data_Management', '@REST', '@Navigation'))
     GROUP BY
         tag
     ORDER BY
@@ -825,6 +833,25 @@ WHERE fichier_Id = $1 and stepstatus='pending'
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+
+app.get('/lastfiles', async (req, res) => {
+  try {
+      const lastFilesQuery = `
+          SELECT nom_fichier_concatiner
+          FROM fichier_enregistres
+          ORDER BY date_enregistrement DESC
+          LIMIT 10;
+      `;
+      const lastFilesResult = await pool.query(lastFilesQuery);
+      const lastFiles = lastFilesResult.rows.map(file => file.nom_fichier_concatiner);
+      res.json(lastFiles);
+  } catch (error) {
+      console.error('Error retrieving last files:', error);
+      res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
  // Endpoint pour obtenir les FeatureName distinctes de deux fichiers
 app.get('/features/distinct', async (req, res) => {
     const { file1, file2 } = req.query;
@@ -930,21 +957,8 @@ app.get('/features/distinct', async (req, res) => {
       client.release();
     }
   }
-  
-// Fonction de conversion de date avec suppression des secondes et des millisecondes
-function convertDate(dateString) {
-  const date = new Date(dateString);
- 
-  const year = date.getFullYear();
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const day = date.getDate().toString().padStart(2, '0');
-  const hours = date.getHours().toString().padStart(2, '0');
-  const minutes = date.getMinutes().toString().padStart(2, '0');
- 
-  const formattedDate = `${year}${month}${day}-00${hours}${minutes}`;
-  return formattedDate;
-}
-  
+
+    
 async function getTestNamesForFeature(featureName, file1, file2) {
   const client = await pool.connect();
   try {
@@ -1039,6 +1053,21 @@ async function getTestNamesForFeature(featureName, file1, file2) {
   }
 }
  
+  
+// Fonction de conversion de date avec suppression des secondes et des millisecondes
+function convertDate(dateString) {
+  const date = new Date(dateString);
+ 
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+ 
+  const formattedDate = `${year}${month}${day}-00${hours}${minutes}`;
+  return formattedDate;
+}
+
 
 
 

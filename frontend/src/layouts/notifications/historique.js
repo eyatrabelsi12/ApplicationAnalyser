@@ -13,6 +13,9 @@ import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
 import DashboardNavbar from 'examples/Navbars/DashboardNavbar';
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 
+import MenuItem from '@mui/material/MenuItem';
+import Select from '@mui/material/Select';
+
 import MDBox from "components/MDBox";
 
 
@@ -24,6 +27,19 @@ const CercleDeRapportPage = () => {
     const [featureSummary, setFeatureSummary] = useState(null);
     const [showCircles, setShowCircles] = useState(false);
     const pieChartRef = useRef(null); 
+    const [fileList, setFileList] = useState([]); // State pour stocker la liste des fichiers
+    const [selectedFile, setSelectedFile] = useState(''); // State pour stocker le fichier sélectionné
+    useEffect(() => {
+        // Effectuez une requête pour récupérer la liste des 10 derniers fichiers stockés
+        fetch('http://localhost:3008/lastfiles')
+            .then(response => response.json())
+            .then(data => setFileList(data))
+            .catch(error => console.error('Error fetching last files:', error));
+    }, []); // Assurez-vous que cette requête est effectuée une seule fois lorsque le composant est monté
+
+    const handleFileSelect = (event) => {
+        setSelectedFile(event.target.value); // Mettre à jour le fichier sélectionné
+    };
 
     const handleFetchData = async () => {
         try {
@@ -32,7 +48,7 @@ const CercleDeRapportPage = () => {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ nom_fichier: inputValue })
+                body: JSON.stringify({ nom_fichier: selectedFile }) // Utilisation du fichier sélectionné
             });
             const data = await response.json();
             if (response.ok) {
@@ -158,33 +174,33 @@ const CercleDeRapportPage = () => {
             <CardContent style={{ borderColor: 'aqua', borderWidth: '1px' }}>
                 <Typography variant="h6" component="div"></Typography>
                 <form onSubmit={handleSubmit}>
-                    <TextField
-                        id="input"
-                        label="Entrez le nom du fichier"
-                        variant="outlined"
-                        width="70%"
-                      
-                        margin="normal"
-                        required
-                        value={inputValue}
-                        onChange={(e) => setInputValue(e.target.value)}
-                        InputProps={{
-                            style: { borderColor: 'black' },
-                            classes: {
-                                focused: 'inputFocused'
-                            }
-                        }}
-                    />
+                <div style={{ position: 'relative', width: "40%", marginTop: '2%',marginLeft:'30px' }}>
+    <div style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '10px',fontSize:'18px',fontFamily:'italic', color: selectedFile ? 'transparent' : 'rgba(0, 0, 0, 0.54)' }}>Choose File Name</div>
+    <Select
+        value={selectedFile}
+        onChange={handleFileSelect}
+        variant="outlined"
+        style={{ width: "100%" }}
+    >
+     
+        {fileList.map(file => (
+            <MenuItem key={file} value={file}>{file}</MenuItem>
+        ))}
+    </Select>
+</div>
+
+
+
                     <br />
-                    <Button type="submit" variant="contained" style={{ color: 'white', backgroundColor: 'rgb(14, 216, 184)', borderColor: 'black' }}>
-                        Afficher
+                    <Button type="submit" variant="contained" style={{ color: 'white', backgroundColor: 'rgb(14, 216, 184)', borderColor: 'black',marginTop:'-6%',marginLeft:'30px'  }}>
+                    Display
                     </Button>
                 </form>
 
                 {error && <Typography variant="body1" color="error">{error}</Typography>}
                 {showCircles && summary && percentages && (
                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'start', width: '100%' }}>
-                        <Card style={{ backgroundColor: 'rgb(249, 249, 249)', width: '300px', top: '5px', borderColor: '', marginRight: '10px' }}>
+                        <Card style={{ backgroundColor: 'rgb(249, 249, 249)', width: '300px', top: '-9px', borderColor: '', marginRight: '10px' }}>
                             <CardContent style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', fontSize: '6.5px', fontFamily: 'Arial', height: '360px' }}>
                                 <Typography variant="body1" style={{ fontSize: '350%', fontFamily: 'Italic', color: 'rgb(107, 103, 103)' }}>Run info</Typography>
                                 <hr style={{ width: '100%', margin: '7px 0' }} />
@@ -229,7 +245,7 @@ const CercleDeRapportPage = () => {
 
                             </CardContent>
                         </Card>
-                        <Card style={{ backgroundColor: 'rgb(249, 249, 249)', width: '300px', top: '5px', marginRight: '10px' }}>
+                        <Card style={{ backgroundColor: 'rgb(249, 249, 249)', width: '300px', top: '-9px', marginRight: '10px' }}>
                             <CardContent style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: '7px', fontFamily: 'Arial', height: '360px' }}>
                                 <Typography variant="body1" style={{ fontSize: '350%', fontFamily: 'Italic', color: 'rgb(107, 103, 103)' ,marginLeft:'-80%'}}>Tests</Typography>
                                 <hr style={{ width: '100%', margin: '5px 0' }} />
@@ -256,7 +272,7 @@ const CercleDeRapportPage = () => {
                                 </div>
                             </CardContent>
                         </Card>
-                        <Card style={{ backgroundColor: 'rgb(249, 249, 249)', width: '300px', top: '5px', marginRight: '10px' }}>
+                        <Card style={{ backgroundColor: 'rgb(249, 249, 249)', width: '300px', top: '-9px', marginRight: '-20px' }}>
                             <CardContent style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: '14px', fontFamily: 'Arial', height: '360px' }}>
                                 <Typography variant="body1" style={{ fontSize: '24px', fontFamily: 'Italic', color: 'rgb(107, 103, 103)', marginLeft: '-69%' }}>Features</Typography>
                                 <hr style={{ width: '100%', margin: '5px 0' }} />

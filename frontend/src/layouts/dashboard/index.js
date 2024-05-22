@@ -25,7 +25,7 @@ import PeopleIcon from '@mui/icons-material/People';
 import BugReportIcon from '@mui/icons-material/BugReport';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'; // Icône d'erreur
 import ReportProblemIcon from '@mui/icons-material/ReportProblem'; // Icône de problème
-import WarningIcon from '@mui/icons-material/Warning'; 
+import WarningIcon from '@mui/icons-material/Warning';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'; // Icône de cercle de vérification
 import ThumbUpIcon from '@mui/icons-material/ThumbUp'; // Icône de pouce levé
 import DoneIcon from '@mui/icons-material/Done';
@@ -37,15 +37,20 @@ import BarChartIcon from '@mui/icons-material/BarChart'; // Icône de graphique 
 import ShowChartIcon from '@mui/icons-material/ShowChart'; // Icône de graphique // Icône d'ajout à une liste avec vérification // Icône de coche// Icône d'avertissement
 import Select from '@mui/material/Select';
 import DeleteIcon from '@material-ui/icons/Delete';
-
-
+import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
+import 'react-circular-progressbar/dist/styles.css';
+import PersonIcon from '@material-ui/icons/Person';
+import InsertDriveFileIcon from '@material-ui/icons/InsertDriveFile';
+ 
+import FolderIcon from '@material-ui/icons/Folder';
+ 
 const formatDay = (date) => {
     return date ? format(new Date(date), 'dd/MM/yyyy_HH:mm:ss') : ''; // Formater la date pour afficher le jour (dd), le mois (MM), l'année (yyyy), l'heure (HH), les minutes (mm) et les secondes (ss). Sinon, retourner une chaîne vide.
 };
 const formatDay1 = (date) => {
     return date ? format(new Date(date), 'dd/MM') : ''; // Modifier le format pour afficher uniquement le jour (dd), le mois (MM) et l'année (yyyy)
 };
-
+ 
  
 function Dashboard() {
     const [combinedData, setCombinedData] = useState([]);
@@ -59,23 +64,23 @@ function Dashboard() {
     const [isGraphExpanded1, setIsGraphExpanded1] = useState(true); // Définir isGraphExpanded1 sur true par défaut
     const [selectedSuite, setSelectedSuite] = useState('WEB-UI');
     const [initialTableData, setInitialTableData] = useState([]); // Ajoutez un état pour suivre la suite sélectionnée
-    const [searchTerm, setSearchTerm] = useState(''); 
+    const [searchTerm, setSearchTerm] = useState('');
     const [rowsPerPage, setRowsPerPage] = useState(5);
     const [suiteOptions, setSuiteOptions] = useState([]);
     const role = localStorage.getItem("role");
-    
+   
     const [userRole, setUserRole] = useState(localStorage.getItem("role"));
-
-
-
-
+ 
+ 
+ 
+ 
  const [tableData, setTableData] = useState([]);
  const [bugs, setBugs] = useState('');
  const [fauxBugs, setFauxBugs] = useState('');
  const [editingIndex, setEditingIndex] = useState(null);
  // Ajoutez un nouvel état pour suivre l'option sélectionnée
 const [selectedSuiteOption, setSelectedSuiteOption] = useState(null);
-
+ 
 useEffect(() => {
     const fetchData = async () => {
       try {
@@ -92,11 +97,11 @@ useEffect(() => {
     };
     fetchData();
   }, []);
-
+ 
   useEffect(() => {
     setUserRole(localStorage.getItem("role")); // Met à jour userRole avec la valeur actuelle du rôle stocké dans le stockage local
-}, []); 
-
+}, []);
+ 
 useEffect(() => {
     const fetchSuiteOptions = async () => {
       try {
@@ -108,8 +113,8 @@ useEffect(() => {
     };
     fetchSuiteOptions();
   }, []);
-
-
+ 
+ 
 const handleBugsChange = (event) => {
     setBugs(event.target.value);
 };
@@ -120,11 +125,11 @@ const handleCheckClick = async (index) => {
     try {
         // Créer une copie des données actuelles
         const updatedData = [...tableData];
-        
+       
         // Mettre à jour les valeurs bugs_on_jira et faux_bugs pour l'élément en cours d'édition
         updatedData[index].bugs_on_jira = bugs;
         updatedData[index].faux_bugs = fauxBugs;
-
+ 
         // Envoyer la requête PUT pour mettre à jour les données sur le serveur
         const response = await fetch(`http://localhost:3008/automated/${updatedData[index].id}`, {
             method: 'PUT',
@@ -133,42 +138,42 @@ const handleCheckClick = async (index) => {
             },
             body: JSON.stringify(updatedData[index]),
         });
-
+ 
         // Vérifier si la requête s'est déroulée avec succès
         if (!response.ok) {
             throw new Error(`Failed to update data: ${response.status}`);
         }
-
+ 
         // Mettre à jour l'état avec les nouvelles données
         setTableData(updatedData);
-
+ 
         // Réinitialiser l'index d'édition
         setEditingIndex(null);
     } catch (error) {
         console.error('Error updating data:', error);
     }
 };
-
+ 
 const handleRowsPerPageChange = (event) => {
     setRowsPerPage(event.target.value);
 };
-
-
+ 
+ 
  const [selectedRows, setSelectedRows] = useState([]);
 const [rowHover, setRowHover] = useState(null); // Pour stocker l'index de la ligne survolée
-
-
+ 
+ 
 const [hoveredIndex, setHoveredIndex] = useState(null);
-
+ 
     const handleMouseEnter = (index) => {
         setHoveredIndex(index);
     };
-
+ 
     const handleMouseLeave = () => {
         setHoveredIndex(null);
     };
  
-
+ 
  
     const handleSearch = (value) => {
         setSearchTerm(value);
@@ -247,17 +252,17 @@ const [hoveredIndex, setHoveredIndex] = useState(null);
    
     const handleCategoryChange = async (category) => {
         setSelectedCategory(category);
-        setSelectedSuiteOption(null); 
+        setSelectedSuiteOption(null);
     };
    
-    
+   
    
  
     const toggleChartSize1 = () => {
         setIsChartExpanded1(!isChartExpanded1);
         setIsGraphExpanded1(!isGraphExpanded1); // Inversez l'état de isGraphExpanded1
     };
-
+ 
     const handleRowClick = (index) => {
         setEditingIndex(index);
         setBugs(tableData[index].bugs_on_jira);
@@ -271,8 +276,8 @@ const [hoveredIndex, setHoveredIndex] = useState(null);
         setBugsValue(currentData.bugs_on_jira.toString());
         setFauxBugsValue(currentData.faux_bugs.toString());
       };
-      
-  
+     
+ 
    // Assurez-vous d'avoir cette fonction dans votre code
 const toggleChartSize2 = () => {
     setIsChartExpanded2(!isChartExpanded2);
@@ -285,7 +290,7 @@ const fetchData1 = async () => {
       console.error('Erreur lors de la récupération des données:', error);
     }
   };
-
+ 
   useEffect(() => {
     fetchData1(); // Appel fetchData lors du montage du composant pour récupérer les données initiales
   }, []);
@@ -300,22 +305,22 @@ const fetchData1 = async () => {
         try {
             // Créez une copie des données actuelles
             const updatedData = [...tableData];
-            
+           
             // Supprimez l'élément correspondant du tableau
             const deletedItem = updatedData.splice(index, 1)[0];
-    
+   
             // Envoyez une requête DELETE pour supprimer les données sur le serveur
             await fetch(`http://localhost:3008/automated/${deletedItem.id}`, {
                 method: 'DELETE',
             });
-    
+   
             // Mettez à jour l'état avec les nouvelles données
             setTableData(updatedData);
         } catch (error) {
             console.error('Error deleting data:', error);
         }
     };
-    
+   
  
     useEffect(() => {
         const fetchData = async () => {
@@ -386,6 +391,7 @@ const fetchData1 = async () => {
    
    
     return (
+       
         <DashboardLayout>
             <DashboardNavbar />
             <MDBox py={3}>
@@ -403,6 +409,7 @@ const fetchData1 = async () => {
             <div>
                 <div> <CalendarTodayIcon /> {formatDay(statistics.skippedFirstTextDate)}</div>
                 <div> <DescriptionIcon /> {statistics.FirstScenarioType} - {statistics.FirstTagName ? statistics.FirstTagName.replace('@', '') : ''}</div>
+                <div ><FolderIcon style={{fontSize:'110%'}} />last File</div>
             </div>
         )
     }}
@@ -422,11 +429,12 @@ const fetchData1 = async () => {
             <div>
                 <div><CalendarTodayIcon /> {formatDay(statistics.passedFirstTextDate)}</div>
                 <div> <DescriptionIcon /> {statistics.FirstScenarioType} - {statistics.FirstTagName ? statistics.FirstTagName.replace('@', '') : ''}</div>
+                <div ><FolderIcon style={{fontSize:'110%'}} />last File</div>
             </div>
         )
     }}
 />
-
+ 
                         </MDBox>
                     </Grid>
                     <Grid item xs={12} md={6} lg={3}>
@@ -442,11 +450,12 @@ const fetchData1 = async () => {
             <div>
                 <div><CalendarTodayIcon /> {formatDay(statistics.passedFirstTextDate)}</div>
                 <div> <DescriptionIcon /> {statistics.FirstScenarioType} - {statistics.FirstTagName ? statistics.FirstTagName.replace('@', '') : ''}</div>
+                <div ><FolderIcon style={{fontSize:'110%'}} />last File</div>
             </div>
         )
     }}
 />
-
+ 
                         </MDBox>
                     </Grid>
                     <Grid item xs={12} md={6} lg={3}>
@@ -462,11 +471,12 @@ const fetchData1 = async () => {
             <div>
                 <div><CalendarTodayIcon /> {formatDay(statistics.failedFirstTextDate)}</div>
                 <div> <DescriptionIcon /> {statistics.FirstScenarioType} - {statistics.FirstTagName ? statistics.FirstTagName.replace('@', '') : ''}</div>
+                <div ><FolderIcon style={{fontSize:'110%'}} />last File</div>
             </div>
         )
     }}
 />
-
+ 
                         </MDBox>
                     </Grid>
                     <Grid container spacing={1}>
@@ -474,7 +484,7 @@ const fetchData1 = async () => {
                     <Card
                            style={{
                             width: isChartExpanded1 ? "154vh" : "490px",
-                            height: isChartExpanded1 ? "80vh" : "276px",
+                            height: isChartExpanded1 ? "80vh" : "290px",
                             position: isChartExpanded1 ? "fixed" : "static",
                             top: isChartExpanded1 ? "125%" : "auto",
                             left: isChartExpanded1 ? "60%" : "auto",
@@ -482,6 +492,7 @@ const fetchData1 = async () => {
                             zIndex: isChartExpanded1 ? 999 : "auto",
                         }}>          
                             <CardContent >
+                                <div style={{fontFamily:'italic',color:'gray',marginLeft:'110px'}}>Histogramme Analyser</div>
              
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'Arial', fontSize: '80%', color: "gray" }}>
                                                                                        {/* Bouton pour agrandir/réduire la carte */}
@@ -525,7 +536,7 @@ const fetchData1 = async () => {
                 </option>
             ))}
                                         </select>
-                                        
+                                       
                                     </div>
                                     <div onClick={toggleChartSize1 } style={{ fontFamily: 'Arial', fontSize: '100%', color: "gray",marginLeft:'-10px',marginTop:'-2px'}}>
         {isChartExpanded1 ? <OpenInNewOffIcon/> : <OpenInNewIcon/>}
@@ -676,9 +687,11 @@ const fetchData1 = async () => {
         left: isChartExpanded2 ? "60%" : "auto",
         transform: isChartExpanded2 ? "translate(-50%, -73%)" : "none",
         zIndex: isChartExpanded2 ? 999 : "auto",
+        height: isChartExpanded1 ? "80vh" : "290px",
     }}>          
  
     <CardContent>
+        <div style={{fontFamily:'italic',color:'gray',marginLeft:'110px'}}>KPI Suite Test Automation</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'Arial', fontSize: '80%', color: "gray"}}>
             <select value={selectedPeriod} onChange={(e) => handlePeriodChange(e.target.value)} style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'Arial', fontSize: '80%', color: "gray", borderColor: "red",marginLeft:'90%'}}>
                 <option value="6months">6 mois</option>
@@ -734,117 +747,131 @@ const fetchData1 = async () => {
                     )
                 }}
             />
-           
-         
-           <Table>
-    <TableRow style={{ backgroundColor: 'white', height: 'fixed', color: 'black' }}>
-        {userRole === 'admin' && (
-            <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}>
-                <CheckCircleIcon style={{ color: 'orange' }} /> Username
-            </TableCell>
-        )}
-        <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}>
-            <PeopleIcon style={{ color: 'blue' }} /> Sprint
-        </TableCell>
-        <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}>
-            <BugReportIcon style={{ color: 'green' }} /> Raised Bugs
-        </TableCell>
-        <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}>
-            <WarningIcon style={{ color: 'red' }} /> False Positive
-        </TableCell>
-        <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}>
-            <BarChartIcon style={{ color: 'gray' }} /> False Positive Percentage
-        </TableCell>
-        <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}>
-            <CheckCircleIcon style={{ color: 'green' }} /> True Bugs
-        </TableCell>
-        <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}>
-            <PlaylistAddCheckIcon style={{ color: 'black' }} /> Action
-        </TableCell>
-    </TableRow>
-
-    <TableBody>
-        {tableData
-            .filter(data => data.selected_sprint.toLowerCase().includes(searchTerm.toLowerCase()))
-            .slice(0, rowsPerPage === -1 ? undefined : rowsPerPage)
-            .map((data, index) => (
-                <TableRow
-                    key={index}
-                    onMouseEnter={() => handleMouseEnter(index)}
-                    onMouseLeave={handleMouseLeave}
-                    style={{ backgroundColor: hoveredIndex === index ? 'rgb(237, 235, 234)' : 'inherit' }}
-                >
+            <Table>
+                <TableRow style={{ backgroundColor: 'white', height: 'fixed', color: 'black' }}>
                     {userRole === 'admin' && (
-                        <TableCell style={{ fontFamily: 'italic', fontSize: '100%' }}>{data.username}</TableCell>
+                        <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}>
+                            <PersonIcon style={{ color: 'orange',fontSize: '100%' }} /> Username
+                        </TableCell>
                     )}
-                    <TableCell style={{ fontFamily: 'italic', fontSize: '100%' }}>{data.selected_sprint}</TableCell>
-                    <TableCell style={{ fontFamily: 'italic', fontSize: '100%' }}>
-                        {editingIndex === index ? (
-                            <TextField value={bugs} onChange={handleBugsChange} />
-                        ) : (
-                            data.bugs_on_jira
-                        )}
+                    <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}>
+                        <PeopleIcon style={{ color: 'blue' }} /> Sprint
                     </TableCell>
-                    <TableCell style={{ fontFamily: 'italic', fontSize: '100%' }}>
-                        {editingIndex === index ? (
-                            <TextField value={fauxBugs} onChange={handleFauxBugsChange} />
-                        ) : (
-                            data.faux_bugs
-                        )}
+                    <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}>
+                        <BugReportIcon style={{ color: 'green' }} /> Raised Bugs
                     </TableCell>
-                    <TableCell style={{ fontFamily: 'italic', fontSize: '100%' }}>
-                        {data.bugs_on_jira !== 0 ? ((data.faux_bugs * 100) / data.bugs_on_jira).toFixed(2) + '%' : 'N/A'}
+                    <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}>
+                        <WarningIcon style={{ color: 'red' }} /> False Positive
                     </TableCell>
-                    <TableCell style={{ fontFamily: 'italic', fontSize: '100%' }}>{data.bugs_on_jira - data.faux_bugs}</TableCell>
-                    <TableCell style={{ fontFamily: 'italic', fontSize: '100%' }}>
-                        {userRole === 'user' ? (
-                            editingIndex === index ? (
-                                <IconButton onClick={() => handleCheckClick(index)}>
-                                    <CheckIcon />
-                                </IconButton>
-                            ) : (
-                                <IconButton onClick={() => handleRowClick(index)}>
-                                    <EditIcon style={{ color: 'rgb(21, 211, 176)' }} />
-                                </IconButton>
-                            )
-                        ) : (
-                            editingIndex === index ? (
-                                <IconButton onClick={() => handleCheckClick(index)}>
-                                    <CheckIcon />
-                                    <EditIcon style={{ color: 'rgb(21, 211, 176)' }} />
-                                </IconButton>
-                            ) : (
-                                <IconButton onClick={() => handleRowClick(index)}>
-                                    <EditIcon style={{ color: 'rgb(21, 211, 176)' }} />
-                                    <DeleteIcon style={{ color: 'red', marginLeft: '15%' }} onClick={() => handleDeleteClick(index)} />
-                                </IconButton>
-                            )
-                        )}
+                    <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}>
+                        <BarChartIcon style={{ color: 'gray' }} /> False Positive Percentage
+                    </TableCell>
+                    <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}>
+                        <CheckCircleIcon style={{ color: 'green' }} /> True Bugs
+                    </TableCell>
+                    <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}>
+                        <PlaylistAddCheckIcon style={{ color: 'black' }} /> Action
                     </TableCell>
                 </TableRow>
-            ))}
-    </TableBody>
-</Table>
-
-
-
-        </TableContainer>
-        <p style={{  marginLeft: '84%', marginTop: '1%',fontFamily:'italic',color:'gray'}}>Per_Row_Page</p>
+                <TableBody>
+                    {tableData
+                        .filter(data => data.selected_sprint.toLowerCase().includes(searchTerm.toLowerCase()))
+                        .slice(0, rowsPerPage === -1 ? undefined : rowsPerPage)
+                        .map((data, index) => {
+                            const falsePositivePercentage = data.bugs_on_jira !== 0
+                                ? (data.faux_bugs * 100) / data.bugs_on_jira
+                                : 0;
+ 
+                            return (
+                                <TableRow
+                                    key={index}
+                                    onMouseEnter={() => handleMouseEnter(index)}
+                                    onMouseLeave={handleMouseLeave}
+                                    style={{ backgroundColor: hoveredIndex === index ? 'rgb(237, 235, 234)' : 'inherit' }}
+                                >
+                                    {userRole === 'admin' && (
+                                        <TableCell style={{ fontFamily: 'italic', fontSize: '95%' ,textAlign:'center'}}>{data.username.replace(/\./g, ' ')}</TableCell>
+                                    )}
+                                    <TableCell style={{ fontFamily: 'italic', fontSize: '95%' ,textAlign:'center'}}>{data.selected_sprint}</TableCell>
+                                    <TableCell style={{ fontFamily: 'italic', fontSize: '95%',textAlign:'center' }}>
+                                        {editingIndex === index ? (
+                                            <TextField value={bugs} onChange={handleBugsChange} />
+                                        ) : (
+                                            data.bugs_on_jira
+                                        )}
+                                    </TableCell>
+                                    <TableCell style={{ fontFamily: 'italic', fontSize: '100%',textAlign:'center' }}>
+                                        {editingIndex === index ? (
+                                            <TextField value={fauxBugs} onChange={handleFauxBugsChange} />
+                                        ) : (
+                                            data.faux_bugs
+                                        )}
+                                    </TableCell>
+                                    <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%', textAlign: 'center' }}>
+                        <div style={{ width: '50px', height: '50px', marginLeft: '28%' }}>
+                            <CircularProgressbar
+                                value={falsePositivePercentage}
+                                text={`${falsePositivePercentage.toFixed(2)}%`}
+                                styles={buildStyles({
+                                    pathColor: '#2ec9a5',
+                                    textColor: 'black',
+                                    trailColor: ' #eaeaea',
+                                    backgroundColor: '#2ec9a5',
+                                })}
+                            />
+                        </div>
+                    </TableCell>
+                                    <TableCell style={{ fontFamily: 'italic', fontSize: '95%',textAlign:'center' }}>
+                                        {data.bugs_on_jira - data.faux_bugs}
+                                    </TableCell>
+                                    <TableCell style={{ fontFamily: 'italic', fontSize: '95%' ,textAlign:'center'}}>
+                                        {userRole === 'user' ? (
+                                            editingIndex === index ? (
+                                                <IconButton onClick={() => handleCheckClick(index)}>
+                                                    <CheckIcon />
+                                                </IconButton>
+                                            ) : (
+                                                <IconButton onClick={() => handleRowClick(index)}>
+                                                    <EditIcon style={{ color: 'rgb(21, 211, 176)' }} />
+                                                </IconButton>
+                                            )
+                                        ) : (
+                                            editingIndex === index ? (
+                                                <IconButton onClick={() => handleCheckClick(index)}>
+                                                    <CheckIcon />
+                                                    <EditIcon style={{ color: 'rgb(21, 211, 176)' }} />
+                                                </IconButton>
+                                            ) : (
+                                                <IconButton onClick={() => handleRowClick(index)}>
+                                                    <EditIcon style={{ color: 'rgb(21, 211, 176)' }} />
+                                                    <DeleteIcon style={{ color: 'red', marginLeft: '15%' }} onClick={() => handleDeleteClick(index)} />
+                                                </IconButton>
+                                            )
+                                        )}
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        })}
+                </TableBody>
+            </Table>
+            <p style={{  marginLeft: '84%', marginTop: '1%',fontFamily:'italic',color:'gray'}}>Per_Row_Page</p>
         <Select
                 value={rowsPerPage}
                 onChange={handleRowsPerPageChange}
                 variant="outlined"
-                style={{ width: '5%', marginLeft: '90%', marginTop: '1%', borderColor: 'black' }}
+                style={{ width: '5%', marginLeft: '90%', marginTop: '1%',marginBottom:'2%', borderColor: 'black' }}
             >
-                <p>Per_Row_Page</p>
+                <p >Per_Row_Page</p>
                 <MenuItem value={5}>5</MenuItem>
                 <MenuItem value={10}>10</MenuItem>
                 <MenuItem value={25}>25</MenuItem>
                 <MenuItem value={-1}>All</MenuItem>
             </Select>
-
-
-
+ 
+        </TableContainer>
+      
+ 
+ 
  
  
    

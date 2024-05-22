@@ -29,9 +29,10 @@ function Automated() {
   const [fauxBugsNumber, setFauxBugsNumber] = useState("");
   const [token, setToken] = useState("");
   useEffect(() => {
-    // Ici, vous pouvez récupérer le token JWT stocké localement, par exemple depuis localStorage ou sessionStorage
     const storedToken = localStorage.getItem("token");
-    if (storedToken) {
+    if (!storedToken) {
+      window.location.href = '/authentication/sign-in';
+    } else {
       setToken(storedToken);
     }
   }, []);

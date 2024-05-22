@@ -6,7 +6,7 @@ import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDInput from "components/MDInput";
 import MDButton from "components/MDButton";
-import { FaCheckSquare, FaRegSquare } from 'react-icons/fa'; // Importation des icônes de case à cocher
+import { FaCheckSquare, FaRegSquare } from 'react-icons/fa';
 import CoverLayout from "layouts/authentication/components/CoverLayout";
 import bgImage from "assets/images/neoxam.jpg";
  
@@ -19,7 +19,6 @@ const Register = () => {
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [registrationError, setRegistrationError] = useState(null);
  
-  // Fonction pour vérifier les conditions du mot de passe
   const checkPasswordConditions = (password) => {
     const conditions = [
       { condition: password.length >= 16, message: "At least 16 characters" },
@@ -36,52 +35,47 @@ const Register = () => {
     e.preventDefault();
  
     if (!email || !password || !confirmPassword) {
-      const errorMessage = (
-        <div style={{position: 'fixed', top: '11%', left: '52.1%', transform: 'translate(-50%, -50%)', padding: '20px', backgroundColor: 'rgb(255, 255, 255)', color: 'rgb(0, 0, 0)', borderRadius: '5px', zIndex: '9999', fontFamily: 'italic',width:'25%'}}>
+      setRegistrationError(
+        <div style={{ position: 'fixed', top: '11%', left: '53%', transform: 'translate(-50%, -50%)', padding: '20px', backgroundColor: 'rgb(255, 255, 255)', color: 'rgb(0, 0, 0)', borderRadius: '5px', zIndex: '9999', fontFamily: 'italic', width: '25%' }}>
           Please fill in all fields.
-          <button onClick={() => setRegistrationError(null)} style={{width: '20%', backgroundColor: 'black', color: 'white', fontFamily: 'italic', borderColor: '#1de9b6', marginLeft: '75%'}}>OK</button>
+          <button onClick={() => setRegistrationError(null)} style={{ width: '20%', backgroundColor: 'black', color: 'white', fontFamily: 'italic', borderColor: '#1de9b6', marginLeft: '75%' }}>OK</button>
         </div>
       );
-      setRegistrationError(errorMessage);
       return;
     }
  
     if (password !== confirmPassword) {
-      const errorMessage = (
-        <div style={{position: 'fixed', top: '11%', left: '52.1%', transform: 'translate(-50%, -50%)', padding: '20px', backgroundColor: 'rgb(255, 255, 255)', color: 'rgb(0, 0, 0)', borderRadius: '5px', zIndex: '9999', fontFamily: 'italic',width:'25%'}}>
+      setRegistrationError(
+        <div style={{ position: 'fixed', top: '11%', left: '52.1%', transform: 'translate(-50%, -50%)', padding: '20px', backgroundColor: 'rgb(255, 255, 255)', color: 'rgb(0, 0, 0)', borderRadius: '5px', zIndex: '9999', fontFamily: 'italic', width: '25%' }}>
           Passwords do not match.
-          <button onClick={() => setRegistrationError(null)} style={{width: '20%', backgroundColor: 'black', color: 'white', fontFamily: 'italic', borderColor: '#1de9b6', marginLeft: '75%'}}>OK</button>
+          <button onClick={() => setRegistrationError(null)} style={{ width: '20%', backgroundColor: 'black', color: 'white', fontFamily: 'italic', borderColor: '#1de9b6', marginLeft: '75%' }}>OK</button>
         </div>
       );
-      setRegistrationError(errorMessage);
       return;
     }
  
     if (password.length < 16) {
-      const errorMessage = (
-        <div style={{position: 'fixed', top: '11%', left: '52.1%', transform: 'translate(-50%, -50%)', padding: '20px', backgroundColor: 'rgb(255, 255, 255)', color: 'rgb(0, 0, 0)', borderRadius: '5px', zIndex: '9999', fontFamily: 'italic',width:'25%'}}>
+      setRegistrationError(
+        <div style={{ position: 'fixed', top: '11%', left: '52.1%', transform: 'translate(-50%, -50%)', padding: '20px', backgroundColor: 'rgb(255, 255, 255)', color: 'rgb(0, 0, 0)', borderRadius: '5px', zIndex: '9999', fontFamily: 'italic', width: '25%' }}>
           Password must be at least 16 characters long.
-          <button onClick={() => setRegistrationError(null)} style={{width: '20%', backgroundColor: 'black', color: 'white', fontFamily: 'italic', borderColor: '#1de9b6', marginLeft: '75%'}}>OK</button>
+          <button onClick={() => setRegistrationError(null)} style={{ width: '20%', backgroundColor: 'black', color: 'white', fontFamily: 'italic', borderColor: '#1de9b6', marginLeft: '75%' }}>OK</button>
         </div>
       );
-      setRegistrationError(errorMessage);
       return;
     }
  
     const conditions = checkPasswordConditions(password);
- 
     if (!conditions.every(condition => condition.condition)) {
-      const unmetConditions = conditions.filter(condition => !condition.condition);
-      const unmetMessages = unmetConditions.map(condition => `- ${condition.message}`).join("\n");
-      alertWithBackground(`Password must meet the requirements. Your password must contain:\n${unmetMessages}`);
-      return;
+        const unmetConditions = conditions.filter(condition => !condition.condition);
+        const unmetMessages = unmetConditions.map(condition => `- ${condition.message}`).join("\n");
+        alertWithBackground(`Password must meet the requirements. Your password must contain:\n${unmetMessages}`);
+        return;
     }
  
     if (!email.includes('@gmail.com')) {
       alertWithBackground('Email must contain "@gmail.com".');
       return;
     }
-    // Vérifier le nom d'utilisateur
     const fullName = username.split('@')[0];
     const usernameValid = fullName.includes('.');
     if (!usernameValid) {
@@ -95,28 +89,35 @@ const Register = () => {
     try {
       const response = await axios.post(url, data);
       console.log(response.data);
-      alertWithBackground('Success! Registered successfully.');
-      navigate('/authentication/sign-in'); // Modifier ici pour rediriger vers la page de connexion
+      setRegistrationSuccess(true);
+ 
+      setTimeout(() => {
+        navigate('/authentication/sign-in');
+      }, 3000);  // Délai de 3 secondes avant la navigation vers la page de connexion
     } catch (error) {
       console.error('Error during registration:', error);
-      alertWithBackground(' Unable to register. Please try again.');
+      if (error.response && error.response.data && error.response.data.message === 'This email is already registered.') {
+        alertWithBackground('This email is already registered.');
+      } else {
+        alertWithBackground('Unable to register. Please try again.');
+      }
     }
   };
  
- 
- 
   const passwordConditions = checkPasswordConditions(password);
-  const alertWithBackground = (message, backgroundColor) => {
+ 
+  const alertWithBackground = (message) => {
     const alertContainer = document.createElement("div");
     alertContainer.classList.add("custom-alert");
     alertContainer.textContent = message;
-    alertContainer.style.backgroundColor = 'white'; // Définir la couleur de fond
-    alertContainer.style.padding = '10px'; // Ajouter un padding pour une meilleure apparence
-    alertContainer.style.color = 'black'; // Définir la couleur du texte pour contraster avec le fond
-    alertContainer.style.borderRadius = '5px'; // Ajouter un peu de bordure arrondie
+    alertContainer.style.backgroundColor = 'white';
+    alertContainer.style.padding = '10px';
+    alertContainer.style.color = 'black';
+    alertContainer.style.borderRadius = '5px';
     alertContainer.style.marginTop = '-20%';
     alertContainer.style.fontFamily = 'italic';
     alertContainer.style.width = '25%';
+    alertContainer.style.marginLeft = '3%';
     const okButton = document.createElement("button");
     okButton.textContent = "OK";
     okButton.style.width = '20%';
@@ -126,16 +127,16 @@ const Register = () => {
     okButton.style.borderColor = '#1de9b6';
     okButton.style.marginLeft = '75%';
     okButton.addEventListener("click", () => {
-        document.body.removeChild(alertContainer);
+      document.body.removeChild(alertContainer);
     });
-   
+ 
     alertContainer.appendChild(okButton);
     document.body.appendChild(alertContainer);
-};
+  };
  
   return (
     <CoverLayout image={bgImage}>
-      <Card style={{ marginTop: '-125px' ,marginRight:'-18%'}}  >
+      <Card style={{ marginTop: '-140px', marginRight: '-18%' }}>
         <MDBox
           variant="gradient"
           bgColor="success"
@@ -144,7 +145,6 @@ const Register = () => {
           mx={2}
           mt={-3}
           p={3}
-         
           mb={1}
           textAlign="center"
         >
@@ -156,9 +156,8 @@ const Register = () => {
           </MDTypography>
         </MDBox>
         <MDBox pt={1} pb={0} px={3}>
- 
           <MDBox component="form" role="form" onSubmit={handleRegister}>
-          <MDBox mb={1}>
+            <MDBox mb={1}>
               <MDInput
                 type="Username"
                 label="Username"
@@ -168,18 +167,16 @@ const Register = () => {
                 onChange={(e) => setUsername(e.target.value)}
               />
             </MDBox>
-          <MDBox mb={1} style={{ position: 'relative' }}>
-  <MDInput
-    type="email"
-    label="Email"
-    fullWidth
-    placeholder="Email"
-    value={email}
-    onChange={(e) => setEmail(e.target.value)}
-  />
-</MDBox>
- 
-       
+            <MDBox mb={1} style={{ position: 'relative' }}>
+              <MDInput
+                type="email"
+                label="Email"
+                fullWidth
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </MDBox>
             <MDBox mb={1}>
               <MDInput
                 type="password"
@@ -189,8 +186,6 @@ const Register = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
-             
- 
             </MDBox>
             <MDBox mb={1}>
               <MDInput
@@ -202,16 +197,14 @@ const Register = () => {
                 onChange={(e) => setConfirmPassword(e.target.value)}
               />
             </MDBox>
-           
-            {/* Affichage des conditions de mot de passe */}
             <MDBox display="flex" flexDirection="column">
-  {passwordConditions.map((condition, index) => (
-    <MDBox key={index} mb={1} display="flex" alignItems="center">
-      {condition.condition ? <FaCheckSquare color="green" /> : <FaRegSquare color="black" />}
-      <span style={{ marginLeft: '5px', fontSize: '12px' }}>{condition.message}</span>
-    </MDBox>
-  ))}
-</MDBox>
+              {passwordConditions.map((condition, index) => (
+                <MDBox key={index} mb={1} display="flex" alignItems="center">
+                  {condition.condition ? <FaCheckSquare color="green" /> : <FaRegSquare color="black" />}
+                  <span style={{ marginLeft: '5px', fontSize: '12px' }}>{condition.message}</span>
+                </MDBox>
+              ))}
+            </MDBox>
             <MDBox mt={4} mb={1}>
               <MDButton variant="gradient" color="success" fullWidth type="submit">
                 Sign Up

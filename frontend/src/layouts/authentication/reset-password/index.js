@@ -8,20 +8,49 @@ import MDButton from "components/MDButton";
 import CoverLayout from "layouts/authentication/components/CoverLayout";
 import bgImage from "assets/images/neoxam.jpg";
 import { Link, useParams } from "react-router-dom";
+import { FaCheckSquare, FaRegSquare } from "react-icons/fa";
+
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const { token } = useParams();
   const [message, setMessage] = useState('');
+
+  const checkPasswordConditions = (newPassword) => {
+    const conditions = [
+      { condition: newPassword.length >= 16, message: "At least 16 characters" },
+      { condition: /[a-z]/.test(newPassword), message: "Lower case letters (a-z)" },
+      { condition: /[A-Z]/.test(newPassword), message: "Upper case letters (A-Z)" },
+      { condition: /\d/.test(newPassword), message: "Numbers (0-9)" },
+      { condition: /[!@#$%^&*]/.test(newPassword), message: "Special characters (e.g. !@#$%^&*)" },
+      { condition: !/(.)\1\1/.test(newPassword), message: "No more than 2 identical characters in a row" },
+    ];
+    return conditions;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
- 
+
+    if (!email || !newPassword || !confirmPassword) {
+      alertWithBackground('Please fill in all fields.');
+      return;
+    }
+
     if (newPassword !== confirmPassword) {
       alert('Passwords do not match.');
       return;
     }
- 
+
+    const passwordConditions = checkPasswordConditions(newPassword);
+
+    if (!passwordConditions.every(condition => condition.condition)) {
+      const unmetConditions = passwordConditions.filter(condition => !condition.condition);
+      const unmetMessages = unmetConditions.map(condition => `- ${condition.message}`).join("\n");
+      alertWithBackground(`Password must meet the requirements. Your password must contain:\n${unmetMessages}`);
+      return;
+    }
+
     try {
       const response = await axios.post(`http://localhost:3003/reset-password/${token}`, { email, password: newPassword });
       setMessage(response.data.message);
@@ -32,6 +61,7 @@ const ForgotPassword = () => {
       alertWithBackground(`Erreur: ${error.message}`);
     }
   };
+
   const alertWithBackground = (message, backgroundColor) => {
     const alertContainer = document.createElement("div");
     alertContainer.classList.add("custom-alert");
@@ -42,6 +72,7 @@ const ForgotPassword = () => {
     alertContainer.style.borderRadius = '5px'; // Ajouter un peu de bordure arrondie
     alertContainer.style.marginTop = '-20%';
     alertContainer.style.fontFamily = 'italic';
+    alertContainer.style.marginLeft = '3.5%';
     alertContainer.style.width = '25%';
     const okButton = document.createElement("button");
     okButton.textContent = "OK";
@@ -58,11 +89,12 @@ const ForgotPassword = () => {
     alertContainer.appendChild(okButton);
     document.body.appendChild(alertContainer);
   };
- 
-   
+
+  const passwordConditions = checkPasswordConditions(newPassword);
+
   return (
     <CoverLayout image={bgImage}>
-      <Card>
+       <Card style={{ marginTop: '-125px' ,marginRight:'-18%'}}  >
         <MDBox
           variant="gradient"
           bgColor="success"
@@ -113,6 +145,15 @@ const ForgotPassword = () => {
                 onChange={(e) => setConfirmPassword(e.target.value)}
               />
             </MDBox>
+             {/* Affichage des conditions de mot de passe */}
+      <MDBox display="flex" flexDirection="column">
+        {passwordConditions.map((condition, index) => (
+          <MDBox key={index} mb={1} display="flex" alignItems="center">
+            {condition.condition ? <FaCheckSquare color="green" /> : <FaRegSquare color="black" />}
+            <span style={{ marginLeft: '5px', fontSize: '12px' }}>{condition.message}</span>
+          </MDBox>
+        ))}
+      </MDBox>
             <MDBox mt={4} mb={1}>
               <MDButton variant="gradient" color="success" fullWidth type="submit">
                 Reset Password
@@ -136,8 +177,9 @@ const ForgotPassword = () => {
           </MDBox>
         </MDBox>
       </Card>
+     
     </CoverLayout>
   );
 }
- 
+
 export default ForgotPassword;

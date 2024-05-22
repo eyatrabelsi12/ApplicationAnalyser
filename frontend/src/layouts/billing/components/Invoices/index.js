@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+
 import axios from 'axios';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import Card from "@mui/material/Card";
@@ -34,6 +35,19 @@ function FileUploader() {
   const [skippedPercentage, setSkippedPercentage] = useState('');
   const [pendingPercentage, setPendingPercentage] = useState('');
   const [showStatusReports, setShowStatusReports] = useState(false);
+  const [concatenatedFileName, setConcatenatedFileName] = useState('');
+  const [textColor, setTextColor] = useState('#0ED8B8');
+
+
+  
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setTextColor(prevColor => prevColor === '#0ED8B8' ? 'gray' : '#0ED8B8');
+    }, 1000);
+  
+    return () => clearInterval(intervalId);
+  }, []);
+  
   
  
   const handleFileChange = (event) => {
@@ -74,16 +88,13 @@ function FileUploader() {
           }
         );
   
-        const fileId = response.data.fileId;
-  
-        await saveDataToDatabase(selectedFile.name, fileId, fileData, fileId, selectedFile.name);
-  
-        const { successPercentage, failurePercentage, skippedPercentage, pendingPercentage } = response.data;
+        const { successPercentage, failurePercentage, skippedPercentage, pendingPercentage, concatenatedFileName } = response.data;
   
         setSuccessPercentage(formatPercentage(successPercentage));
         setFailurePercentage(formatPercentage(failurePercentage));
         setSkippedPercentage(formatPercentage(skippedPercentage));
         setPendingPercentage(formatPercentage(pendingPercentage));
+        setConcatenatedFileName(concatenatedFileName);
   
         setShowStatusReports(true);
   
@@ -102,7 +113,6 @@ function FileUploader() {
           alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 55%; transform: translate(-50%, -50%); padding: 10px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
           alertDiv.innerHTML = `
          The file ${selectedFile.name} already exists. Please choose another file name.
-
             <button style="width: 13%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 85%;" onclick="this.parentNode.remove()">OK</button>
           `;
           document.body.appendChild(alertDiv);
@@ -120,6 +130,7 @@ function FileUploader() {
     };
     fileReader.readAsText(selectedFile);
   };
+  
   
  
   const handleOptionChange = (event) => {
@@ -182,7 +193,7 @@ function FileUploader() {
                     padding: '0 5px',
                   }}
                 >
-                  Type*
+                 Pipeline*
                 </InputLabel>
                 <Select
                   labelId="demo-simple-select-label"
@@ -250,32 +261,39 @@ function FileUploader() {
               }
             </Box>
             {showStatusReports && (
-    <Box mt={1} display="flex" justifyContent="center" alignItems="center">
-        <div style={{ marginLeft: '-60%', marginTop: "1.5%" }}>
-            <b><h7 style={{ color: 'rgb(99, 98, 95)', fontFamily: 'italic' }}>The Status Results of The Imported Report</h7></b>
-            <table>
-                <tbody>
-                    <tr>
-                        <td style={{ color: 'gray', fontFamily: 'italic' }}>Passed:</td>
-                        <td><span style={{ color: 'green' }}>{successPercentage}</span></td>
-                    </tr>
-                    <tr>
-                        <td style={{ color: 'gray', fontFamily: 'italic' }}>Failed:</td>
-                        <td><span style={{ color: 'red' }}>{failurePercentage}</span></td>
-                    </tr>
-                    <tr>
-                        <td style={{ color: 'gray', fontFamily: 'italic' }}>Skipped:</td>
-                        <td><span style={{ color: 'blue' }}>{skippedPercentage}</span></td>
-                    </tr>
-                    <tr>
-                        <td style={{ color: 'gray', fontFamily: 'italic' }}>Pending:</td>
-                        <td><span style={{ color: 'rgb(255, 209, 25)' }}>{pendingPercentage}</span></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </Box>
+  <Box mt={1} display="flex" justifyContent="center" alignItems="center">
+    <div style={{ marginLeft: '-35%', marginTop: "1.5%" }}>
+      <b><h7 style={{ color: 'rgb(99, 98, 95)', fontFamily: 'italic' }}>The Status Results of The Imported Report</h7></b>
+      <table>
+        <tbody>
+          <tr>
+            <td style={{ color: 'gray', fontFamily: 'italic' }}>Passed:</td>
+            <td><span style={{ color: 'green' }}>{successPercentage}</span></td>
+          </tr>
+          <tr>
+            <td style={{ color: 'gray', fontFamily: 'italic' }}>Failed:</td>
+            <td><span style={{ color: 'red' }}>{failurePercentage}</span></td>
+          </tr>
+          <tr>
+            <td style={{ color: 'gray', fontFamily: 'italic' }}>Skipped:</td>
+            <td><span style={{ color: 'blue' }}>{skippedPercentage}</span></td>
+          </tr>
+          <tr>
+            <td style={{ color: 'gray', fontFamily: 'italic' }}>Pending:</td>
+            <td><span style={{ color: 'rgb(255, 209, 25)' }}>{pendingPercentage}</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <Typography variant="body2" style={{ fontFamily: 'italic', color: textColor,fontSize:'90%' }}>
+  New File Name imported: <span style={{ color: 'gray' }}>{concatenatedFileName}</span>
+</Typography>
+
+
+
+    </div>
+  </Box>
 )}
+
  
  
           </form>

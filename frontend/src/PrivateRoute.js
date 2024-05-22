@@ -1,14 +1,18 @@
 import React from "react";
-import { Route, Navigate } from "react-router-dom";
+import { Route, Redirect } from "react-router-dom";
 
-// Fonction de vérification d'authentification (simulée)
-const isAuthenticated = true; // À remplacer par votre logique d'authentification réelle
-
-const PrivateRoute = ({ component: Component, isPrivate, ...rest }) => {
-  return isPrivate && !isAuthenticated ? (
-    <Navigate to="/authentication/sign-in" />
-  ) : (
-    <Route {...rest} element={<Component />} />
+const PrivateRoute = ({ component: Component, isAuthenticated, ...rest }) => {
+  return (
+    <Route
+      {...rest}
+      render={(props) =>
+        isAuthenticated ? (
+          <Component {...props} />
+        ) : (
+          <Redirect to="/authentication/sign-in" />
+        )
+      }
+    />
   );
 };
 

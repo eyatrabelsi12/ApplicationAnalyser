@@ -1,70 +1,54 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from 'axios';
-
+ 
 import Grid from "@mui/material/Grid";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import FormControl from "@mui/material/FormControl";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
-import InputAdornment from "@mui/material/InputAdornment";
-import EmailIcon from "@mui/icons-material/Email";
-import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
-import Alert from '@mui/material/Alert';
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import MDBox from "components/MDBox";
 import Header from "layouts/profile/components/Header1";
-import { getUserRole } from "utils/authUtils";
-
+import ListAltIcon from "@mui/icons-material/ListAlt";
+import { getUserRole } from "../utils/authUtils";
+const [token, setToken] = useState("");
 function Add_Role() {
   const [email, setEmail] = useState("");
   const [newRole, setNewRole] = useState("");
   const [message, setMessage] = useState("");
-  const [success, setSuccess] = useState(false);
   const userRole = getUserRole();
   const navigate = useNavigate();
-
   useEffect(() => {
     // Check user role and redirect if not admin
     if (userRole !== "admin") {
       navigate("/dashboard"); // Redirect to dashboard if not admin
     }
   }, [userRole, navigate]);
-
   const handleChangeRole = async () => {
-    if (!email || !newRole) {
-      setSuccess(false);
-      setMessage("Both fields are required");
-      return;
-    }
-
+    // Utilisez le token ici pour l'envoyer dans la requête fetch
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("Token is not available");
+      const response = await fetch("http://localhost:3003/change-role", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ email, newRole }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setMessage(`Role changed successfully: ${data.role}`);
+      } else {
+        const errorData = await response.json();
+        setMessage(`Error: ${errorData.message}`);
       }
-
-      const config = {
-        headers: { Authorization: `Bearer ${token}` }
-      };
-
-      const response = await axios.post("http://localhost:3003/change-role", {
-        email: email, // Ajoutez l'email de l'utilisateur
-        newRole: newRole // Ajoutez le nouveau rôle
-      }, config);
-
-      console.log("Role changed successfully", response.data);
-      setSuccess(true);
-      setMessage("Role changed successfully");
-    } catch (error) {
-      console.error("Error changing role");
-      setSuccess(false);
-      setMessage("Email does not exist " );
+    } catch (err) {
+      console.error(err);
+      setMessage("Error changing role");
     }
   };
-
   return (
     <DashboardLayout>
       <DashboardNavbar />
@@ -73,9 +57,8 @@ function Add_Role() {
         <MDBox mt={-5} mb={-2} style={{ color: "rgb(242, 242, 242)" }}>
           <Grid container spacing={6}>
             <Grid item xs={12} md={4}>
-              <Card sx={{ bgcolor: "white" }} style={{ height: "90%", width: "150%" }}>
+              <Card sx={{ bgcolor: "white" }} style={{ height: "90%" }}>
                 <CardContent>
-                  {message && <Alert severity={success ? "success" : "error"}>{message}</Alert>}
                   <FormControl fullWidth>
                     <TextField
                       id="email"
@@ -85,13 +68,6 @@ function Add_Role() {
                       onChange={(e) => setEmail(e.target.value)}
                       required
                       style={{ marginTop: "20px" }}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <EmailIcon />
-                          </InputAdornment>
-                        ),
-                      }}
                     />
                   </FormControl>
                   <FormControl fullWidth>
@@ -103,13 +79,6 @@ function Add_Role() {
                       onChange={(e) => setNewRole(e.target.value)}
                       required
                       style={{ marginTop: "30px" }}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <AdminPanelSettingsIcon />
-                          </InputAdornment>
-                        ),
-                      }}
                     />
                   </FormControl>
                   <Button
@@ -135,5 +104,5 @@ function Add_Role() {
     </DashboardLayout>
   );
 }
-
+ 
 export default Add_Role;

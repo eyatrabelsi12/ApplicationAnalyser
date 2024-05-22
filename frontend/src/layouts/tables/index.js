@@ -120,6 +120,27 @@ function Tables() {
         document.body.appendChild(alertDiv);
         return;
       }
+
+        // Extraire les parties pertinentes des noms de fichiers
+        const extractTestType = (fileName) => {
+          const parts = fileName.split('_');
+          return parts[1]; // Suppose que le type de test est toujours la deuxième partie du nom de fichier
+      };
+
+      const testType1 = extractTestType(fileName1);
+      const testType2 = extractTestType(fileName2);
+
+      // Vérifier si les fichiers appartiennent au même test
+      if (testType1 !== testType2) {
+          const alertDiv = document.createElement('div');
+          alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 55%; transform: translate(-50%, -50%); padding: 20px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
+          alertDiv.innerHTML = `
+          Enter two files belonging to the same test
+            <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
+          `;
+          document.body.appendChild(alertDiv);
+          return;
+      }
  
         const response = await fetch(`http://localhost:3008/features/distinct?file1=${fileName1}&file2=${fileName2}`);
         if (!response.ok) {
@@ -415,7 +436,7 @@ function cleanSpecialCharacters(str, keepHyphen = false) {
                     <input type="text" id="fileName1" value={fileName1} onChange={(e) => setFileName1(e.target.value)}  style={{width:"29.2%" }}/>
                     <label htmlFor="fileName2" style={{fontFamily:"italic",fontSize:"18px",marginLeft:'70px'}}>Execution_2</label>
                     <input type="text" id="fileName2" value={fileName2} onChange={(e) => setFileName2(e.target.value)} style={{width:"29.6%" }}/>
-                    <button onClick={fetchFeatures}>Compare</button>
+                    <button onClick={fetchFeatures} variant="contained" style={{color: 'white', backgroundColor: 'rgb(14, 216, 184)', borderColor: 'black' }}>Compare</button>
                     {error && <p className="error">Erreur: {error}</p>}
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'start', width: '40%' }}>
@@ -715,14 +736,8 @@ function cleanSpecialCharacters(str, keepHyphen = false) {
   title={statusIcon === 'difference-icon' ? 'Different' : 'Identical'}
 />
 </td>
-<td style={{ textAlign: 'center', verticalAlign: 'middle' }}>{testPair.stepStatusFile1} <a href={`http://yoda:9999/fs/mnt/nfs/citstorage/CIT/Reports/${testPair.fileTypeFile1}/${testPair.dateFile1}/${testPair.nameFile1}`} target="_blank" rel="noopener noreferrer">
- 
-    <FontAwesomeIcon icon={faLink} style={{ marginLeft: '5px', color: 'blue', cursor: 'pointer' }} />
-  </a></td>
-            <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>{testPair.stepStatusFile2}<a href={`http://yoda:9999/fs/mnt/nfs/citstorage/CIT/Reports/${testPair.fileTypeFile2}/${testPair.dateFile2}/${testPair.nameFile2}`} target="_blank" rel="noopener noreferrer">
- 
-<FontAwesomeIcon icon={faLink} style={{ marginLeft: '5px', color: 'blue', cursor: 'pointer' }} />
-</a></td>
+<td style={{ textAlign: 'center', verticalAlign: 'middle' }}>{testPair.stepStatusFile1} </td>
+            <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>{testPair.stepStatusFile2}</td>
             </tr>
           ));
         })}
