@@ -39,11 +39,9 @@ import Select from '@mui/material/Select';
 import DeleteIcon from '@material-ui/icons/Delete';
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
-import PersonIcon from '@material-ui/icons/Person';
-import InsertDriveFileIcon from '@material-ui/icons/InsertDriveFile';
- 
 import FolderIcon from '@material-ui/icons/Folder';
- 
+import PersonIcon from '@material-ui/icons/Person';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 const formatDay = (date) => {
     return date ? format(new Date(date), 'dd/MM/yyyy_HH:mm:ss') : ''; // Formater la date pour afficher le jour (dd), le mois (MM), l'année (yyyy), l'heure (HH), les minutes (mm) et les secondes (ss). Sinon, retourner une chaîne vide.
 };
@@ -62,6 +60,7 @@ function Dashboard() {
     const [selectedFilter, setSelectedFilter] = useState('DHVD');
     const [chartData, setChartData] = useState({});
     const [isGraphExpanded1, setIsGraphExpanded1] = useState(true); // Définir isGraphExpanded1 sur true par défaut
+    const [isGraphExpanded2, setIsGraphExpanded2] = useState(true); // Définir isGraphExpanded1 sur true par défaut
     const [selectedSuite, setSelectedSuite] = useState('WEB-UI');
     const [initialTableData, setInitialTableData] = useState([]); // Ajoutez un état pour suivre la suite sélectionnée
     const [searchTerm, setSearchTerm] = useState('');
@@ -281,6 +280,7 @@ const [hoveredIndex, setHoveredIndex] = useState(null);
    // Assurez-vous d'avoir cette fonction dans votre code
 const toggleChartSize2 = () => {
     setIsChartExpanded2(!isChartExpanded2);
+    setIsGraphExpanded2(!isGraphExpanded2); // Inversez l'état de isGraphExpanded1
 };
 const fetchData1 = async () => {
     try {
@@ -409,7 +409,7 @@ const fetchData1 = async () => {
             <div>
                 <div> <CalendarTodayIcon /> {formatDay(statistics.skippedFirstTextDate)}</div>
                 <div> <DescriptionIcon /> {statistics.FirstScenarioType} - {statistics.FirstTagName ? statistics.FirstTagName.replace('@', '') : ''}</div>
-                <div ><FolderIcon style={{fontSize:'110%'}} />last File</div>
+                <div ><FolderIcon style={{fontSize:'110%'}}/>last File</div>
             </div>
         )
     }}
@@ -479,21 +479,20 @@ const fetchData1 = async () => {
  
                         </MDBox>
                     </Grid>
-                    <Grid container spacing={1}>
+                    <Grid container spacing={2} style={{marginLeft:'1px'}}>
                     <Grid item xs={12} md={6}>
                     <Card
                            style={{
-                            width: isChartExpanded1 ? "154vh" : "490px",
-                            height: isChartExpanded1 ? "80vh" : "290px",
+                            width: isChartExpanded1 ? "158vh" : "486px",
+                            height: isChartExpanded1 ? "85vh" : "310px",
                             position: isChartExpanded1 ? "fixed" : "static",
-                            top: isChartExpanded1 ? "125%" : "auto",
+                            top: isChartExpanded1 ? "129%" : "auto",
                             left: isChartExpanded1 ? "60%" : "auto",
                             transform: isChartExpanded1 ? "translate(-50%, -136%)" : "none",
                             zIndex: isChartExpanded1 ? 999 : "auto",
                         }}>          
                             <CardContent >
-                                <div style={{fontFamily:'italic',color:'gray',marginLeft:'110px'}}>Histogramme Analyser</div>
-             
+                            <div style={{fontFamily:'italic',color:'gray',marginLeft: isGraphExpanded1 ? '119px' : '39%'}}>Histogramme Analyser</div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'Arial', fontSize: '80%', color: "gray" }}>
                                                                                        {/* Bouton pour agrandir/réduire la carte */}
                            
@@ -525,7 +524,7 @@ const fetchData1 = async () => {
                                     </div>
        
                                     <div>
-                                        <select value={selectedCategory} onChange={(e) => handleCategoryChange(e.target.value)} style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'Arial', fontSize: '80%', color: "gray", borderColor: "red" ,marginLeft: isGraphExpanded1 ? '88px' : '250%' }}>
+                                        <select value={selectedCategory} onChange={(e) => handleCategoryChange(e.target.value)} style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'Arial', fontSize: '80%', color: "gray", borderColor: "red" ,marginLeft: isGraphExpanded1 ? '88px' : '230%' }}>
                                             <option value="web-ui">Web-UI</option>
                                             <option value="dataManagement">Data Management</option>
                                             <option value="RestAPI">RestAPI</option>
@@ -538,7 +537,7 @@ const fetchData1 = async () => {
                                         </select>
                                        
                                     </div>
-                                    <div onClick={toggleChartSize1 } style={{ fontFamily: 'Arial', fontSize: '100%', color: "gray",marginLeft:'-10px',marginTop:'-2px'}}>
+                                    <div onClick={toggleChartSize1 } style={{ fontFamily: 'Arial', fontSize: '100%', color: "gray",marginLeft:'-7px',marginTop:'-2px'}}>
         {isChartExpanded1 ? <OpenInNewOffIcon/> : <OpenInNewIcon/>}
        
     </div>
@@ -681,17 +680,16 @@ const fetchData1 = async () => {
                    </Grid>
                    <Grid item xs={12} md={6}>
                    <Card style={{
-         width: isChartExpanded2 ? "155vh" : "490px",
+         width: isChartExpanded2 ? "155vh" : "495px",
         position: isChartExpanded2 ? "fixed" : "static",
-        top: isChartExpanded2 ? "75%" : "auto",
+        top: isChartExpanded2 ? "76%" : "auto",
         left: isChartExpanded2 ? "60%" : "auto",
         transform: isChartExpanded2 ? "translate(-50%, -73%)" : "none",
         zIndex: isChartExpanded2 ? 999 : "auto",
-        height: isChartExpanded1 ? "80vh" : "290px",
     }}>          
  
     <CardContent>
-        <div style={{fontFamily:'italic',color:'gray',marginLeft:'110px'}}>KPI Suite Test Automation</div>
+    <div style={{fontFamily:'italic',color:'gray',marginLeft: isGraphExpanded2 ? '119px' : '36%'}}>KPI Suite Test Automation</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'Arial', fontSize: '80%', color: "gray"}}>
             <select value={selectedPeriod} onChange={(e) => handlePeriodChange(e.target.value)} style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'Arial', fontSize: '80%', color: "gray", borderColor: "red",marginLeft:'90%'}}>
                 <option value="6months">6 mois</option>
@@ -705,7 +703,7 @@ const fetchData1 = async () => {
     </div>  
     <div>
                                         <select value={selectedSuite} // Mettre à jour la valeur du sélecteur avec l'état de la suite sélectionnée
-          onChange={e => setSelectedSuite(e.target.value)}  style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'Arial', fontSize: '63%', color: "gray", borderColor: "red" ,width:'90px',marginLeft:'65%',marginTop:'-23px'}}>
+          onChange={e => setSelectedSuite(e.target.value)}  style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'Arial', fontSize: '63%', color: "gray", borderColor: "red" ,width:'90px',marginTop:'-22px',marginLeft: isGraphExpanded2 ? '310px' : '80%' }}>
                                             <option value="WEB-UI">Web-UI</option>
                                             <option value="Data-Management">Data Management</option>
                                             <option value="Rest API">Rest API</option>
@@ -751,17 +749,17 @@ const fetchData1 = async () => {
                 <TableRow style={{ backgroundColor: 'white', height: 'fixed', color: 'black' }}>
                     {userRole === 'admin' && (
                         <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}>
-                            <PersonIcon style={{ color: 'orange',fontSize: '100%' }} /> Username
+                           <PeopleIcon style={{ color: 'black' }} />  Username
                         </TableCell>
                     )}
                     <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}>
-                        <PeopleIcon style={{ color: 'blue' }} /> Sprint
+                    <CalendarMonthIcon style={{ color: '#0ED8B8',fontSize: '100%' }} /> Sprint
                     </TableCell>
                     <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}>
-                        <BugReportIcon style={{ color: 'green' }} /> Raised Bugs
+                        <BugReportIcon style={{ color: 'red' }} /> Raised Bugs
                     </TableCell>
                     <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}>
-                        <WarningIcon style={{ color: 'red' }} /> False Positive
+                        <WarningIcon style={{ color: 'orange'}} /> False Positive
                     </TableCell>
                     <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}>
                         <BarChartIcon style={{ color: 'gray' }} /> False Positive Percentage
@@ -869,7 +867,7 @@ const fetchData1 = async () => {
             </Select>
  
         </TableContainer>
-      
+ 
  
  
  
