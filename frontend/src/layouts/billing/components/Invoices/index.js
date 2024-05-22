@@ -262,7 +262,7 @@ function FileUploader() {
             </Box>
             {showStatusReports && (
   <Box mt={1} display="flex" justifyContent="center" alignItems="center">
-    <div style={{ marginLeft: '-35%', marginTop: "1.5%" }}>
+    <div style={{ marginLeft: '-45%', marginTop: "1.5%" }}>
       <b><h7 style={{ color: 'rgb(99, 98, 95)', fontFamily: 'italic' }}>The Status Results of The Imported Report</h7></b>
       <table>
         <tbody>
