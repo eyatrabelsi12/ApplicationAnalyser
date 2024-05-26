@@ -8,7 +8,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import NotInterestedIcon from '@mui/icons-material/NotInterested';
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
 import { faCheckCircle, faNotEqual, faEquals } from '@fortawesome/free-solid-svg-icons';
- 
+import { FormControl, InputLabel, Select, MenuItem, Button, Box } from '@mui/material';
 import { faLink } from '@fortawesome/free-solid-svg-icons';
  
 import { styled } from '@mui/material/styles';
@@ -52,7 +52,7 @@ function Tables() {
   const [fileName2, setFileName2] = useState('');
   const [fileInfo1, setFileInfo1] = useState('');
   const [fileInfo2, setFileInfo2] = useState('');
- 
+  const [files, setFiles] = useState([]);
   const [isComparisonDone, setIsComparisonDone] = useState(false);
  
   const [search, setSearch] = useState({
@@ -73,10 +73,42 @@ function Tables() {
   const [showComparison, setShowComparison] = useState(true);
   const [testNameCounts, setTestNameCounts] = useState({});
   const [testNameDistinctCounts, setTestNameDistinctCounts] = useState({});
+  const extractType = (fileName) => {
+    const parts = fileName.split('_');
+    return parts[0];
+};
  
+  useEffect(() => {
+    fetchLastFiles();
  
+    // Ajouter les styles globaux pour les options de sélection
+    const style = document.createElement('style');
+    style.innerHTML = `
+      select option:hover {
+        background-color: black;
+        color: white;
+      }
+    `;
+    document.head.appendChild(style);
  
+    // Nettoyer les styles lorsque le composant se démonte
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
  
+  const fetchLastFiles = async () => {
+    try {
+      const response = await fetch('http://localhost:3008/lastfiles');
+      if (!response.ok) {
+        throw new Error('Erreur lors de la récupération des fichiers');
+      }
+      const data = await response.json();
+      setFiles(data);
+    } catch (error) {
+      console.error('Erreur lors de la récupération des fichiers:', error.message);
+    }
+  };
  
   const formatBuildDate = (dateString) => {
     // Convertir la chaîne de caractères en objet Date
@@ -86,19 +118,32 @@ function Tables() {
     const year = date.getFullYear();
     const month = (`0${date.getMonth() + 1}`).slice(-2);
     const day = (`0${date.getDate()}`).slice(-2);
-    const hours = (`0${date.getHours()}`).slice(-2);
-    const minutes = (`0${date.getMinutes()}`).slice(-2);
-    const seconds = (`0${date.getSeconds()}`).slice(-2);
-    const milliseconds = (`00${date.getMilliseconds()}`).slice(-3);
  
     // Formater la date selon vos spécifications
-    const formattedDate = `${year}-${month}-${day}_${hours}:${minutes}:${seconds}.${milliseconds}`;
+    const formattedDate = `${year}-${month}-${day}`;
  
     return formattedDate;
   };
  
   const fetchFeatures = async () => {
     try {
+     
+const Type1 = extractType(fileName1);
+const Type2 = extractType(fileName2);
+ 
+ 
+ 
+ 
+if (Type1 !== Type2) {
+  const alertDiv = document.createElement('div');
+  alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 57%; transform: translate(-50%, -50%); padding: 20px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
+  alertDiv.innerHTML = `
+  Enter two files belonging to the same pipeline
+    <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
+  `;
+  document.body.appendChild(alertDiv);
+  return;
+}
        // Vérifier que les noms de fichiers sont différents et non vides
       if (fileName1 === fileName2) {
         const alertDiv = document.createElement('div');
@@ -120,16 +165,16 @@ function Tables() {
         document.body.appendChild(alertDiv);
         return;
       }
-
+ 
         // Extraire les parties pertinentes des noms de fichiers
         const extractTestType = (fileName) => {
           const parts = fileName.split('_');
           return parts[1]; // Suppose que le type de test est toujours la deuxième partie du nom de fichier
       };
-
+ 
       const testType1 = extractTestType(fileName1);
       const testType2 = extractTestType(fileName2);
-
+ 
       // Vérifier si les fichiers appartiennent au même test
       if (testType1 !== testType2) {
           const alertDiv = document.createElement('div');
@@ -150,7 +195,7 @@ function Tables() {
         console.log("features :", data);
  
         // Vérifier si des données ont été récupérées
-      
+     
        
         let fileInfoData;
         const fileInfoResponse = await fetch(`http://localhost:3008/file-info?fileName1=${encodeURIComponent(fileName1)}&fileName2=${encodeURIComponent(fileName2)}`);
@@ -258,7 +303,7 @@ function Tables() {
         setError('Erreur lors de la récupération des données. Veuillez réessayer.');
     }
 };
-
+ 
 const passedPercentage = parseFloat(fileInfo1.passed_percentage).toFixed(2);
 const failedPercentage = parseFloat(fileInfo1.failed_percentage).toFixed(2);
 const skippedPercentage = parseFloat(fileInfo1.skipped_percentage).toFixed(2);
@@ -431,14 +476,48 @@ function cleanSpecialCharacters(str, keepHyphen = false) {
       )}
               <MDBox pt={2} style={{ maxHeight: '80vh', overflow: 'auto' }}>
                 <div className="compare-page">
-                  <div className="input-section">
-                  <label htmlFor="fileName2" style={{fontFamily:"italic",fontSize:"18px" }}>Execution_1</label>
-                    <input type="text" id="fileName1" value={fileName1} onChange={(e) => setFileName1(e.target.value)}  style={{width:"29.2%" }}/>
-                    <label htmlFor="fileName2" style={{fontFamily:"italic",fontSize:"18px",marginLeft:'70px'}}>Execution_2</label>
-                    <input type="text" id="fileName2" value={fileName2} onChange={(e) => setFileName2(e.target.value)} style={{width:"29.6%" }}/>
-                    <button onClick={fetchFeatures} variant="contained" style={{color: 'white', backgroundColor: 'rgb(14, 216, 184)', borderColor: 'black' }}>Compare</button>
-                    {error && <p className="error">Erreur: {error}</p>}
-                  </div>
+                <div>
+                <FormControl variant="outlined" style={{ width: '30%', marginRight: '90px',marginLeft:'20px'}}>
+  <InputLabel style={{ fontFamily: 'italic', fontSize: '18px'}}>Execution_1</InputLabel>
+  <Select
+    id="fileName1"
+    value={fileName1}
+    onChange={(e) => setFileName1(e.target.value)}
+    label="Execution_1"
+    style={{ '&:focus': { backgroundColor: 'white' } }}
+  >
+    {files.map((fileName1, index) => (
+      <MenuItem key={index} value={fileName1}>{fileName1}</MenuItem>
+    ))}
+  </Select>
+</FormControl>
+<FormControl variant="outlined" style={{ width: '30%', marginLeft:'10%' }}>
+  <InputLabel style={{ fontFamily: 'italic', fontSize: '18px' }}>Execution_2</InputLabel>
+  <Select
+    id="fileName2"
+    value={fileName2}
+    onChange={(e) => setFileName2(e.target.value)}
+    label="Execution_2"
+    style={{ '&:focus': { backgroundColor: 'white' } }}
+  >
+    {files.map((fileName2, index) => (
+      <MenuItem key={index} value={fileName2}>{fileName2}</MenuItem>
+    ))}
+  </Select>
+</FormControl>
+ 
+ 
+          <Button
+            onClick={fetchFeatures}
+            variant="contained"
+            style={{ color: 'white', backgroundColor: 'rgb(14, 216, 184)', borderColor: 'white',marginLeft:'20px' }}
+          >
+            Compare
+          </Button>
+ 
+          {error && <p className="error">Erreur: {error}</p>}
+        </div>
+       
                   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'start', width: '40%' }}>
                   {isComparisonDone && (
     <Card style={{ backgroundColor: 'rgb(249, 249, 249)', width: '500px', top: '5px', borderColor: '', marginRight: '10px' }}>
@@ -451,7 +530,7 @@ function cleanSpecialCharacters(str, keepHyphen = false) {
            
                 <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(119, 119, 119)' }}><b style={{ color: 'rgb(107, 103, 103)' }}>DATAHUB environment</b></Typography>
                 <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(150, 142, 142)' }}>{fileInfo1.type}</Typography>
-                <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(119, 119, 119)' }}><b style={{ color: 'rgb(107, 103, 103)' }}>Date_D'execution</b></Typography>
+                <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(119, 119, 119)' }}><b style={{ color: 'rgb(107, 103, 103)' }}>Execution Date</b></Typography>
                 <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(150, 142, 142)' }}> {formatBuildDate(fileInfo1.first_textdate)}</Typography>
                 <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(119, 119, 119)' }}><b style={{ color: 'rgb(107, 103, 103)' }}>Suite</b></Typography>
                 <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(150, 142, 142)' }}>{fileInfo1.tag}</Typography>
@@ -501,7 +580,7 @@ function cleanSpecialCharacters(str, keepHyphen = false) {
  
 )}
   {isComparisonDone && (
-<div style={{ fontSize: '130%', fontFamily: 'Italic', color: 'rgb(107, 103, 103)' ,fontWeight: 'bold',marginLeft:'-4px',marginRight:'4px',marginTop:'110px' }}>VS</div>
+<div style={{ fontSize: '130%', fontFamily: 'Italic', color: 'rgb(107, 103, 103)' ,fontWeight: 'bold',marginLeft:'-6px',marginRight:'6px',marginTop:'110px' }}>VS</div>
  )}
  
    {isComparisonDone && (
@@ -513,7 +592,7 @@ function cleanSpecialCharacters(str, keepHyphen = false) {
         <div>
             <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(119, 119, 119)' }}><b style={{ color: 'rgb(107, 103, 103)' }}>DATAHUB environment</b></Typography>
             <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(150, 142, 142)' }}>{fileInfo2.type}</Typography>
-            <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(119, 119, 119)' }}><b style={{ color: 'rgb(107, 103, 103)' }}>Date_D'execution</b></Typography>
+            <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(119, 119, 119)' }}><b style={{ color: 'rgb(107, 103, 103)' }}>Execution Date</b></Typography>
             <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(150, 142, 142)' }}> {formatBuildDate(fileInfo2.first_textdate)}</Typography>
             <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(119, 119, 119)' }}><b style={{ color: 'rgb(107, 103, 103)' }}>Suite</b></Typography>
             <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(150, 142, 142)' }}>{fileInfo2.tag}</Typography>
@@ -527,7 +606,7 @@ function cleanSpecialCharacters(str, keepHyphen = false) {
                     <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(119, 119, 119)' }}><b style={{ color: 'rgb(107, 103, 103)' }}>Tests</b></Typography>
                     <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(150, 142, 142)' ,margin:'1%'}}>{fileInfo2.total_steps}</Typography>
                 </div>
-              
+             
             <div>
             <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -751,7 +830,7 @@ function cleanSpecialCharacters(str, keepHyphen = false) {
                     </div>
                   )}
                 </div>
-                <style jsx>{`
+                <style>{`
                   .compare-page {
                     padding: 30px;
                     color: black;

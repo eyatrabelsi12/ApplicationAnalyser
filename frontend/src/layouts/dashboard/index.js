@@ -249,9 +249,16 @@ const [hoveredIndex, setHoveredIndex] = useState(null);
     };
    
    
-    const handleCategoryChange = async (category) => {
-        setSelectedCategory(category);
-        setSelectedSuiteOption(null);
+    const handleCategoryChange = (category) => {
+        if (category === 'web-ui' || category === 'dataManagement' || category === 'RestAPI' || category === 'Navigations') {
+            setSelectedCategory(category);
+            setSelectedSuiteOption(null);
+            // Appelez fetchData ou toute autre fonction que vous utilisez pour mettre à jour les données
+            fetchData(category, selectedFilter);
+        } else {
+            // Ne rien faire si l'option sélectionnée provient de suiteOptions
+            console.log('Option from suiteOptions selected, doing nothing.');
+        }
     };
    
    
@@ -524,17 +531,17 @@ const fetchData1 = async () => {
                                     </div>
        
                                     <div>
-                                        <select value={selectedCategory} onChange={(e) => handleCategoryChange(e.target.value)} style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'Arial', fontSize: '80%', color: "gray", borderColor: "red" ,marginLeft: isGraphExpanded1 ? '88px' : '230%' }}>
-                                            <option value="web-ui">Web-UI</option>
-                                            <option value="dataManagement">Data Management</option>
-                                            <option value="RestAPI">RestAPI</option>
-                                            <option value="Navigations">Navigation</option>
-                                             {suiteOptions.map((option) => (
-                <option key={option} value={option}>
-                    {option}
-                </option>
-            ))}
-                                        </select>
+                                    <select value={selectedCategory} onChange={(e) => handleCategoryChange(e.target.value)} style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'Arial', fontSize: '80%', color: "gray", borderColor: "red", marginLeft: isGraphExpanded1 ? '88px' : '230%' }}>
+    <option value="web-ui">Web-UI</option>
+    <option value="dataManagement">Data Management</option>
+    <option value="RestAPI">RestAPI</option>
+    <option value="Navigations">Navigation</option>
+    {suiteOptions.map((option) => (
+        <option key={option} value={option}>
+            {option}
+        </option>
+    ))}
+</select>
                                        
                                     </div>
                                     <div onClick={toggleChartSize1 } style={{ fontFamily: 'Arial', fontSize: '100%', color: "gray",marginLeft:'-7px',marginTop:'-2px'}}>
@@ -842,7 +849,7 @@ const fetchData1 = async () => {
                                             ) : (
                                                 <IconButton onClick={() => handleRowClick(index)}>
                                                     <EditIcon style={{ color: 'rgb(21, 211, 176)' }} />
-                                                    <DeleteIcon style={{ color: 'red', marginLeft: '15%' }} onClick={() => handleDeleteClick(index)} />
+                                                    <DeleteIcon style={{ color: 'red', marginLeft: '15%' }} onClick={(e) => { e.stopPropagation(); handleDeleteClick(index) }}/>
                                                 </IconButton>
                                             )
                                         )}
@@ -852,20 +859,22 @@ const fetchData1 = async () => {
                         })}
                 </TableBody>
             </Table>
-            <p style={{  marginLeft: '84%', marginTop: '1%',fontFamily:'italic',color:'gray'}}>Per_Row_Page</p>
-        <Select
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginTop: '1%', marginBottom: '2%' }}>
+            <p style={{ fontFamily: 'italic', color: 'gray', fontSize: '17px', marginRight: '10px' }}>
+                Per Row Page
+            </p>
+            <Select
                 value={rowsPerPage}
                 onChange={handleRowsPerPageChange}
                 variant="outlined"
-                style={{ width: '5%', marginLeft: '90%', marginTop: '1%',marginBottom:'2%', borderColor: 'black' }}
+                style={{ width: '60px', borderColor: 'black' ,marginRight:'20px'}}
             >
-                <p >Per_Row_Page</p>
                 <MenuItem value={5}>5</MenuItem>
                 <MenuItem value={10}>10</MenuItem>
                 <MenuItem value={25}>25</MenuItem>
                 <MenuItem value={-1}>All</MenuItem>
             </Select>
- 
+        </div>
         </TableContainer>
  
  

@@ -13,6 +13,13 @@ import MDBox from "components/MDBox";
 import Header from "layouts/profile/components/Header1";
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import { getUserRole } from "../utils/authUtils";
+
+
+import successSound from './success3.mp3';
+import errorSound from './error4.wav';
+
+const successAudio = new Audio(successSound);
+const errorAudio = new Audio(errorSound);
 const [token, setToken] = useState("");
 function Add_Role() {
   const [email, setEmail] = useState("");
@@ -40,10 +47,15 @@ function Add_Role() {
       if (response.ok) {
         const data = await response.json();
         setMessage(`Role changed successfully: ${data.role}`);
+        console.log("Playing success sound");
+        successAudio.play();
       } else {
         const errorData = await response.json();
         setMessage(`Error: ${errorData.message}`);
+        console.log("Playing error sound");
+        errorAudio.play();
       }
+      
     } catch (err) {
       console.error(err);
       setMessage("Error changing role");

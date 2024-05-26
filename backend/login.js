@@ -67,7 +67,7 @@ app.post('/login', async (req, res) => {
               if (failedAttempts === 4) {
                   lockUntil = new Date(Date.now() + 15000); // 15 secondes
                   lockMessage = 'Your account is locked for 15 seconds due to multiple failed login attempts.';
-              } else if (failedAttempts === 7) {
+              } else if (failedAttempts === 8) {
                   lockUntil = new Date(Date.now() + 7200000); // 2 heures
                   lockMessage = 'Your account is locked for 2 hours due to multiple failed login attempts.';
               }

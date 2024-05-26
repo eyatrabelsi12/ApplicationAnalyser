@@ -70,43 +70,40 @@ app.post('/automated', verifyToken, async (req, res) => {
 
 app.post('/insert-data', async (req, res) => {
   try {
-    if (!req.body.fileName || !req.body.file || !req.body.buildHash || !req.body.type) {
-      throw new Error('Certains champs requis sont manquants dans la requête.');
-    }
-
-    const fileName = req.body.fileName;
-    const fileData = req.body.file;
-    const buildHash = req.body.buildHash;
-    const type = req.body.type;
-
-    // Vérifier si le nom de fichier existe déjà dans la table
-    const fileExists = await checkFileExists(fileName);
-
-    if (fileExists) {
-      res.status(409).json({ alert: `Le fichier ${fileName} est déjà stocké dans la base de données.` });
-    } else {
-      // Enregistrer le nom du fichier dans la table des fichiers enregistrés
-      const fileId = await saveFileNameToDatabase(fileName, buildHash, type);
-
-      // Continuer avec l'enregistrement des données JSON
-      await saveDataToDatabase(fileName, fileId, fileData);
-
-      // Calculer les pourcentages
-      const percentages = await calculatePercentages(fileId);
-
-      // Renvoyer les pourcentages et le nom de fichier concaténé au front-end
-      res.status(200).json({
-        message: 'Données JSON enregistrées avec succès',
-        successPercentage: percentages.successPercentage,
-        failurePercentage: percentages.failurePercentage,
-        skippedPercentage: percentages.skippedPercentage,
-        pendingPercentage: percentages.pendingPercentage,
-        concatenatedFileName: percentages.concatenatedFileName
-      });
-    }
+      const { fileName, file: fileData, buildHash, type } = req.body;
+ 
+      if (!fileName || !fileData || !buildHash || !type) {
+          throw new Error('Certains champs requis sont manquants dans la requête.');
+      }
+ 
+      // Vérifier si le build hash existe déjà dans la table
+      const fileExists = await checkFileExists(buildHash);
+ 
+      if (fileExists) {
+          return res.status(409).json({ alert: `Le fichier est déjà stocké dans la base de données.` });
+      } else {
+          // Enregistrer le nom du fichier dans la table des fichiers enregistrés
+          const fileId = await saveFileNameToDatabase(fileName, buildHash, type);
+ 
+          // Continuer avec l'enregistrement des données JSON
+          await saveDataToDatabase(fileName, fileId, fileData);
+ 
+          // Calculer les pourcentages
+          const percentages = await calculatePercentages(fileId);
+ 
+          // Renvoyer les pourcentages et le nom de fichier concaténé au front-end
+          res.status(200).json({
+              message: 'Données JSON enregistrées avec succès',
+              successPercentage: percentages.successPercentage,
+              failurePercentage: percentages.failurePercentage,
+              skippedPercentage: percentages.skippedPercentage,
+              pendingPercentage: percentages.pendingPercentage,
+              concatenatedFileName: percentages.concatenatedFileName
+          });
+      }
   } catch (error) {
-    console.error('Erreur lors de l\'enregistrement des données JSON dans la base de données :', error);
-    res.status(500).json({ error: 'Erreur interne du serveur : ' + error.message });
+      console.error('Erreur lors de l\'enregistrement des données JSON dans la base de données :', error);
+      res.status(500).json({ error: 'Erreur interne du serveur : ' + error.message });
   }
 });
 
@@ -269,19 +266,19 @@ async function calculatePercentages(fileId) {
 
 
 
-async function checkFileExists(fileName) {
-    console.log("Nom de fichier:", fileName);
-    const client = await pool.connect();
-    try {
-        const query = 'SELECT COUNT(*) FROM fichier_enregistres WHERE nom_fichier = $1';
-        const result = await client.query(query, [fileName]);
-        console.log("Résultat de la requête:", result.rows);
-        return result.rows[0].count > 0;
-    } catch (error) {
-        throw new Error(`Erreur lors de la vérification de l'existence du fichier : ${error.message}`);
-    } finally {
-        client.release();
-    }
+async function checkFileExists(buildHash) {
+  console.log("Build Hash:", buildHash);
+  const client = await pool.connect();
+  try {
+      const query = 'SELECT COUNT(*) FROM fichier_enregistres WHERE build_hash = $1';
+      const result = await client.query(query, [buildHash]);
+      console.log("Résultat de la requête:", result.rows);
+      return result.rows[0].count > 0;
+  } catch (error) {
+      throw new Error(`Erreur lors de la vérification de l'existence du fichier : ${error.message}`);
+  } finally {
+      client.release();
+  }
 }
 
 
@@ -850,6 +847,35 @@ app.get('/lastfiles', async (req, res) => {
       res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+
+// Endpoint to get the 10 latest concatenated file names
+app.get('/latest-file-names', async (req, res) => {
+  try {
+    const latestFileNames = await getLatestFileNames();
+    res.json(latestFileNames);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+async function getLatestFileNames() {
+  const client = await pool.connect();
+  try {
+    const query = `
+    SELECT DISTINCT nom_fichier_concatiner
+    FROM fichier_enregistres
+    ORDER BY nom_fichier_concatiner DESC
+    LIMIT 10;
+    
+    `;
+    const result = await client.query(query);
+    return result.rows.map(row => row.nom_fichier_concatiner);
+  } finally {
+    client.release();
+  }
+}
 
 
  // Endpoint pour obtenir les FeatureName distinctes de deux fichiers

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-
+ 
 import axios from 'axios';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import Card from "@mui/material/Card";
@@ -14,6 +14,13 @@ import TextField from '@mui/material/TextField';
 import './style.css';
  
 import MDBox from "components/MDBox";
+import successSound from './success3.mp3';
+import errorSound from './error4.wav';
+
+
+// Créez des instances de Audio
+const successAudio = new Audio(successSound);
+const errorAudio = new Audio(errorSound);
  
 async function saveDataToDatabase(fileName, fileId, fileData, fichier_id, nom_fichier) {
   // Logique de sauvegarde des données dans la base de données
@@ -37,18 +44,18 @@ function FileUploader() {
   const [showStatusReports, setShowStatusReports] = useState(false);
   const [concatenatedFileName, setConcatenatedFileName] = useState('');
   const [textColor, setTextColor] = useState('#0ED8B8');
-
-
-  
+ 
+ 
+ 
   useEffect(() => {
     const intervalId = setInterval(() => {
       setTextColor(prevColor => prevColor === '#0ED8B8' ? 'gray' : '#0ED8B8');
     }, 1000);
-  
+ 
     return () => clearInterval(intervalId);
   }, []);
-  
-  
+ 
+ 
  
   const handleFileChange = (event) => {
     setSelectedFile(event.target.files[0]);
@@ -64,13 +71,14 @@ function FileUploader() {
         <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
       `;
       document.body.appendChild(alertDiv);
+      errorAudio.play();  // Jouer le son d'erreur
       return;
     }
-  
+ 
     const fileReader = new FileReader();
     fileReader.onload = async (event) => {
       const fileData = JSON.parse(event.target.result);
-  
+ 
       try {
         const response = await axios.post(
           'http://localhost:3008/insert-data',
@@ -87,17 +95,17 @@ function FileUploader() {
             withCredentials: true,
           }
         );
-  
+ 
         const { successPercentage, failurePercentage, skippedPercentage, pendingPercentage, concatenatedFileName } = response.data;
-  
+ 
         setSuccessPercentage(formatPercentage(successPercentage));
         setFailurePercentage(formatPercentage(failurePercentage));
         setSkippedPercentage(formatPercentage(skippedPercentage));
         setPendingPercentage(formatPercentage(pendingPercentage));
         setConcatenatedFileName(concatenatedFileName);
-  
+ 
         setShowStatusReports(true);
-  
+ 
         const alertDiv = document.createElement('div');
         alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 50%; transform: translate(-50%, -50%); padding: 20px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
         alertDiv.innerHTML = `
@@ -105,17 +113,19 @@ function FileUploader() {
           <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
         `;
         document.body.appendChild(alertDiv);
-  
+        successAudio.play();
+ 
         console.log('Réponse du serveur :', response.data);
       } catch (error) {
         if (error.response && error.response.status === 409) {
           const alertDiv = document.createElement('div');
           alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 55%; transform: translate(-50%, -50%); padding: 10px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
           alertDiv.innerHTML = `
-         The file ${selectedFile.name} already exists. Please choose another file name.
+         The file already exists. Please choose another file.
             <button style="width: 13%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 85%;" onclick="this.parentNode.remove()">OK</button>
           `;
           document.body.appendChild(alertDiv);
+          errorAudio.play(); 
         } else {
           const alertDiv = document.createElement('div');
           alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 50%; transform: translate(-50%, -50%); padding: 20px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
@@ -130,8 +140,8 @@ function FileUploader() {
     };
     fileReader.readAsText(selectedFile);
   };
-  
-  
+ 
+ 
  
   const handleOptionChange = (event) => {
     setSelectedOption(event.target.value);
@@ -168,7 +178,7 @@ function FileUploader() {
   };
  
   return (
-  
+ 
     <Card className="custom-card" style={{ borderColor: 'black', borderWidth: '1px' }} >
       <MDBox pt={2} px={2} display="flex" justifyContent="flex-start" alignItems="center">
         <Typography variant="h6" fontWeight="medium" display="flex" alignItems="center">
@@ -262,8 +272,8 @@ function FileUploader() {
             </Box>
             {showStatusReports && (
   <Box mt={1} display="flex" justifyContent="center" alignItems="center">
-    <div style={{ marginLeft: '-45%', marginTop: "1.5%" }}>
-      <b><h7 style={{ color: 'rgb(99, 98, 95)', fontFamily: 'italic' }}>The Status Results of The Imported Report</h7></b>
+    <div style={{ marginLeft: '-42%', marginTop: "1.5%" }}>
+      <b><h7 style={{ color: ' rgb(99, 98, 95)', fontFamily: 'italic' }}>The Status Results of The Imported Report</h7></b>
       <table>
         <tbody>
           <tr>
@@ -287,13 +297,13 @@ function FileUploader() {
       <Typography variant="body2" style={{ fontFamily: 'italic', color: textColor,fontSize:'90%' }}>
   New File Name imported: <span style={{ color: 'gray' }}>{concatenatedFileName}</span>
 </Typography>
-
-
-
+ 
+ 
+ 
     </div>
   </Box>
 )}
-
+ 
  
  
           </form>

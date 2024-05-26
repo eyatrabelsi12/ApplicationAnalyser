@@ -13,6 +13,13 @@ import MDBox from "components/MDBox";
 import Header from "layouts/profile/components/Header1";
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import { getUserRole } from "../utils/authUtils"; 
+import successSound from './success3.mp3';
+import errorSound from './error4.wav';
+
+
+// Créez des instances de Audio
+const successAudio = new Audio(successSound);
+const errorAudio = new Audio(errorSound);
 
 function Pipeline() {
   const [suiteName, setSuiteName] = useState("");
@@ -57,6 +64,7 @@ const handleSubmit = (event) => {
       <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
     `;
     document.body.appendChild(alertDiv);
+    errorAudio.play();
     return;
   }
   
@@ -78,6 +86,7 @@ const handleSubmit = (event) => {
           <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
         `;
         document.body.appendChild(alertDiv);
+        successAudio.play();
 
         // Reset form fields after successful submission
         setSuiteName("");
@@ -116,6 +125,7 @@ const handleDelete = async () => {
       <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
     `;
     document.body.appendChild(alertDiv);
+    errorAudio.play();
     return;
   }
 
@@ -133,6 +143,8 @@ const handleDelete = async () => {
         <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
       `;
       document.body.appendChild(alertDiv);
+      successAudio.play();
+    
     } else {
       const alertDiv = document.createElement('div');
       alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 50%; transform: translate(-50%, -50%); padding: 20px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');

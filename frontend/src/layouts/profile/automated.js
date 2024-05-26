@@ -16,6 +16,11 @@ import DescriptionIcon from "@mui/icons-material/Description";
 import { FaBug, FaUsers } from 'react-icons/fa';
 import InputAdornment from "@mui/material/InputAdornment";
 import WarningIcon from '@mui/icons-material/Warning';
+import successSound from './success3.mp3';
+import errorSound from './error4.wav';
+
+const successAudio = new Audio(successSound);
+const errorAudio = new Audio(errorSound);
 
 
 
@@ -102,6 +107,7 @@ function Automated() {
             <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
           `;
           document.body.appendChild(alertDiv);
+          successAudio.play();
   
           // Réinitialiser les champs du formulaire après la soumission réussie
           setScenario("");
@@ -131,6 +137,7 @@ function Automated() {
         <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
       `;
       document.body.appendChild(alertDiv);
+      errorAudio.play();
     }
   };
   
