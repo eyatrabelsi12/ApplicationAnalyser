@@ -499,7 +499,7 @@ const fetchData1 = async () => {
                             zIndex: isChartExpanded1 ? 999 : "auto",
                         }}>          
                             <CardContent >
-                            <div style={{fontFamily:'italic',color:'gray',marginLeft: isGraphExpanded1 ? '119px' : '39%'}}>Histogramme Analyser</div>
+                            <div style={{fontFamily:'italic',fontSize:'100%',color:'gray',marginLeft: isGraphExpanded1 ? '119px' : '39%'}}>Histogramme Analyzer</div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'Arial', fontSize: '80%', color: "gray" }}>
                                                                                        {/* Bouton pour agrandir/réduire la carte */}
                            
@@ -696,7 +696,8 @@ const fetchData1 = async () => {
     }}>          
  
     <CardContent>
-    <div style={{fontFamily:'italic',color:'gray',marginLeft: isGraphExpanded2 ? '119px' : '36%'}}>KPI Suite Test Automation</div>
+    <div style={{fontFamily:'italic',color:'gray',marginLeft: isGraphExpanded2 ? '119px' : '39%',Size:'20%'}}>KPI Suite Test Automation</div>
+    
         <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'Arial', fontSize: '80%', color: "gray"}}>
             <select value={selectedPeriod} onChange={(e) => handlePeriodChange(e.target.value)} style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'Arial', fontSize: '80%', color: "gray", borderColor: "red",marginLeft:'90%'}}>
                 <option value="6months">6 mois</option>
@@ -774,9 +775,11 @@ const fetchData1 = async () => {
                     <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}>
                         <CheckCircleIcon style={{ color: 'green' }} /> True Bugs
                     </TableCell>
-                    <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}>
-                        <PlaylistAddCheckIcon style={{ color: 'black' }} /> Action
-                    </TableCell>
+                    {userRole === 'admin' && (
+    <TableCell style={{ fontWeight: 'bold', fontFamily: 'italic', fontSize: '80%' }}>
+        <PlaylistAddCheckIcon style={{ color: 'black' }} /> Action
+    </TableCell>
+)}
                 </TableRow>
                 <TableBody>
                     {tableData
@@ -826,33 +829,34 @@ const fetchData1 = async () => {
                             />
                         </div>
                     </TableCell>
-                                    <TableCell style={{ fontFamily: 'italic', fontSize: '95%',textAlign:'center' }}>
+                    <TableCell style={{ fontFamily: 'italic', fontSize: '95%',textAlign:'center' }}>
                                         {data.bugs_on_jira - data.faux_bugs}
                                     </TableCell>
-                                    <TableCell style={{ fontFamily: 'italic', fontSize: '95%' ,textAlign:'center'}}>
-                                        {userRole === 'user' ? (
-                                            editingIndex === index ? (
-                                                <IconButton onClick={() => handleCheckClick(index)}>
-                                                    <CheckIcon />
-                                                </IconButton>
-                                            ) : (
-                                                <IconButton onClick={() => handleRowClick(index)}>
-                                                    <EditIcon style={{ color: 'rgb(21, 211, 176)' }} />
-                                                </IconButton>
-                                            )
-                                        ) : (
-                                            editingIndex === index ? (
-                                                <IconButton onClick={() => handleCheckClick(index)}>
-                                                    <CheckIcon />
-                                                    <EditIcon style={{ color: 'rgb(21, 211, 176)' }} />
-                                                </IconButton>
-                                            ) : (
-                                                <IconButton onClick={() => handleRowClick(index)}>
-                                                    <EditIcon style={{ color: 'rgb(21, 211, 176)' }} />
-                                                    <DeleteIcon style={{ color: 'red', marginLeft: '15%' }} onClick={(e) => { e.stopPropagation(); handleDeleteClick(index) }}/>
-                                                </IconButton>
-                                            )
-                                        )}
+                                    <TableCell>
+    <TableCell style={{ fontFamily: 'italic', fontSize: '95%', textAlign: 'center' }}>
+        {userRole === 'user' ? (
+            editingIndex === index ? (
+                <IconButton onClick={() => handleCheckClick(index)}>
+                    <CheckIcon />
+                </IconButton>
+            ) : (
+                // Vous pouvez ajouter du contenu ou le laisser vide
+                null
+            )
+        ) : (
+            editingIndex === index ? (
+                <IconButton onClick={() => handleCheckClick(index)}>
+                    <CheckIcon />
+                    <EditIcon style={{ color: 'rgb(21, 211, 176)' }} />
+                </IconButton>
+            ) : (
+                <IconButton onClick={() => handleRowClick(index)}>
+                    <EditIcon style={{ color: 'rgb(21, 211, 176)' }} />
+                    <DeleteIcon style={{ color: 'red', marginLeft: '15%' }} onClick={(e) => { e.stopPropagation(); handleDeleteClick(index) }}/>
+                </IconButton>
+            )
+        )}
+    </TableCell>
                                     </TableCell>
                                 </TableRow>
                             );

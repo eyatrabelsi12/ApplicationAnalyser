@@ -837,7 +837,7 @@ app.get('/lastfiles', async (req, res) => {
           SELECT nom_fichier_concatiner
           FROM fichier_enregistres
           ORDER BY date_enregistrement DESC
-          LIMIT 10;
+          LIMIT 20;
       `;
       const lastFilesResult = await pool.query(lastFilesQuery);
       const lastFiles = lastFilesResult.rows.map(file => file.nom_fichier_concatiner);
@@ -1138,7 +1138,7 @@ app.get('/automated', async (req, res) => {
 app.get('/data', async (req, res) => {
   try {
     let suiteFilter = '';
-    const { suite } = req.query;
+    const { suite, period } = req.query;
  
     // Vérifiez si le paramètre suite est fourni dans la requête
     if (suite) {
@@ -1149,17 +1149,28 @@ app.get('/data', async (req, res) => {
                  FROM automated_data
                  ${suiteFilter}`;
  
-    // Si l'utilisateur a sélectionné "6 mois", récupérez les données des 12 derniers sprints
-    if (req.query.period === '6months') {
-      query += ` ORDER BY created_at DESC
-                 LIMIT 12`;
-    }
-    // Si l'utilisateur a sélectionné "1 an", récupérez les données des 24 derniers sprints
-    else if (req.query.period === '1year') {
-      query += ` ORDER BY created_at DESC
-                 LIMIT 24`;
+    // Ajouter les conditions de période
+    if (period === '6months') {
+      query = `SELECT * FROM (
+                 SELECT scenario, test_cases, bugs_on_jira, selected_sprint, created_at
+                 FROM automated_data
+                 ${suiteFilter}
+                 ORDER BY created_at DESC
+                 LIMIT 12
+               ) AS recent_sprints
+               ORDER BY created_at ASC`;
+    } else if (period === '1year') {
+      query = `SELECT * FROM (
+                 SELECT scenario, test_cases, bugs_on_jira, selected_sprint, created_at
+                 FROM automated_data
+                 ${suiteFilter}
+                 ORDER BY created_at DESC
+                 LIMIT 24
+               ) AS recent_sprints
+               ORDER BY created_at ASC`;
     }
  
+    // Exécution de la requête
     const result = await pool.query(query);
  
     // Récupération des données de la base de données
@@ -1180,6 +1191,9 @@ app.get('/data', async (req, res) => {
     res.status(500).json({ message: 'Error fetching data' });
   }
 });
+
+
+
 // Route pour la modification des données
 app.delete('/automated/:id', async (req, res) => {
   const id = req.params.id;

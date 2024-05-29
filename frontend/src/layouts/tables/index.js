@@ -149,7 +149,7 @@ if (Type1 !== Type2) {
         const alertDiv = document.createElement('div');
         alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 59%; transform: translate(-50%, -50%); padding: 20px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
         alertDiv.innerHTML = `
-          Saisissez deux rapports différents.
+        Submit two different reports
           <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
         `;
         document.body.appendChild(alertDiv);
@@ -159,7 +159,7 @@ if (Type1 !== Type2) {
         const alertDiv = document.createElement('div');
         alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 50%; transform: translate(-50%, -50%); padding: 20px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
         alertDiv.innerHTML = `
-          Veuillez saisir les noms des deux fichiers.
+        Please enter the names of the two files
           <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
         `;
         document.body.appendChild(alertDiv);

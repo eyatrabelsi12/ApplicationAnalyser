@@ -60,7 +60,7 @@ const routes = [
   },
   {
     type: "collapse",
-    name: "Comparer",
+    name: "Compare",
     key: "Compare",
     icon: <Icon fontSize="small">compare_arrows</Icon>, // Changed icon to compare_arrows
     route: "/Compare",
@@ -84,19 +84,20 @@ const routes = [
   },
   {
     type: "collapse",
-    name: "Historique",
-    key:"historique",
+    name: "OverView",
+    key:"OverView",
     icon: <Icon fontSize="small"><HistoryIcon /></Icon>,
-    route: "/historique",
+    route: "/OverView",
     component: <HistoriquePage />,
   },
   {
     type: "collapse",
-    name: "Automated",
-    key: "Automated",
+    name: "KPIs",
+    key: "KPIs",
     icon: <Icon fontSize="small"><SportsSoccerIcon /></Icon>,
-    route: "/Automated",
+    route: "/KPIs",
     component: <Automated />,
+    roles: ["admin"],
   },
   {
     type: "collapse",

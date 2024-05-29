@@ -101,12 +101,10 @@ app.post('/login', async (req, res) => {
              return res.status(400).json({ message: 'This email is already registered.' });
          }
  
-      // Définir le rôle en fonction de l'email
-      let role = 'user';
-      if (email === 'Nesrinedhaouadi@gmail.com') {
-        role = 'admin';
-      }
- 
+         let role = 'user';
+         if (email === 'Nesrinedhaouadi@gmail.com' || email === 'manelbacha.master@gmail.com') {
+           role = 'admin';
+         }
       // Hashage du mot de passe
       const hashedPassword = await bcrypt.hash(password, 10);
  

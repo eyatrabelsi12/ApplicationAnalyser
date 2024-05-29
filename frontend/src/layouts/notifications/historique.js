@@ -121,8 +121,8 @@ const CercleDeRapportPage = () => {
         datasets: [
             {
                 data: [summary ? summary.total_passed : 0, summary ? summary.total_failed : 0, summary ? summary.total_skipped : 0, summary ? summary.total_pending : 0],
-                backgroundColor: ['#11c143', '#ff0000', '#3598db', '#ffff00'],
-                hoverBackgroundColor: ['#11c143', '#ff0000', '#3598db', '#ffff00'],
+                backgroundColor: ['#08c999', '#ff0000', '#3598db', '#f4f400'],
+                hoverBackgroundColor: ['#08c999', '#ff0000', '#3598db', '#f4f400'],
             },
         ],
     };
@@ -144,8 +144,8 @@ const CercleDeRapportPage = () => {
                         parseInt(featureSummary[0].total_passed),
                         parseInt(featureSummary[0].total_failed)
                     ],
-                    backgroundColor: ['#11c143', '#ff0000'],
-                    hoverBackgroundColor: ['#11c143', '#ff0000'],
+                    backgroundColor: ['#08c999', '#ff0000'],
+                    hoverBackgroundColor: ['#08c999', '#ff0000'],
                 },
             ],
         };
@@ -252,7 +252,7 @@ const CercleDeRapportPage = () => {
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginTop: '10px' }}>
                                     <div style={{ display: 'flex', alignItems: 'center' }}>
-                                        <CheckCircleIcon style={{ color: '#11c143', marginRight: '1px', fontSize: '50px' ,height:'25%',width:'25%'}} />
+                                        <CheckCircleIcon style={{ color: '#08c999', marginRight: '1px', fontSize: '50px' ,height:'25%',width:'25%'}} />
                                         <Typography variant="body1" style={{ fontSize: '14px' }}>{percentages.passed}%</Typography>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -264,7 +264,7 @@ const CercleDeRapportPage = () => {
                                         <Typography variant="body1" style={{ fontSize: '14px' }}>{percentages.skipped}%</Typography>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center' }}>
-                                        <HourglassEmptyIcon style={{ color: '#ffff00', marginRight: '1px', fontSize: '30px' ,height:'25%',width:'25%'}} />
+                                        <HourglassEmptyIcon style={{ color: '#f4f400', marginRight: '1px', fontSize: '30px' ,height:'25%',width:'25%'}} />
                                         <Typography variant="body1" style={{ fontSize: '14px' }}>{percentages.pending}%</Typography>
                                     </div>
                                 </div>
@@ -280,7 +280,7 @@ const CercleDeRapportPage = () => {
                                 {featurePercentage.length > 0 && (
                                     <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'center' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', marginRight: '20px' }}>
-                                            <CheckCircleIcon style={{ color: '#11c143', marginRight: '5px', fontSize: '14px' ,marginTop:'20px'}} />
+                                            <CheckCircleIcon style={{ color: '#08c999', marginRight: '5px', fontSize: '14px' ,marginTop:'20px'}} />
                                             <Typography variant="body1" style={{ fontSize: '14px' ,marginTop:'20px'}}>{featurePercentage[0]}%</Typography>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center' }}>

@@ -18,6 +18,8 @@ import InputAdornment from "@mui/material/InputAdornment";
 import WarningIcon from '@mui/icons-material/Warning';
 import successSound from './success3.mp3';
 import errorSound from './error4.wav';
+import Box from '@mui/material/Box';
+
 
 const successAudio = new Audio(successSound);
 const errorAudio = new Audio(errorSound);
@@ -167,6 +169,33 @@ function Automated() {
              
             >
               <form onSubmit={handleSubmitForm}>
+
+
+              <FormControl fullWidth>
+                  <InputLabel id="sprint-label">
+                    <FaUsers  /> Select Sprint
+                  </InputLabel>
+                  <Select
+                    labelId="sprint-label"
+                    id="sprint"
+                    value={selectedSprint}
+                    onChange={handleSprintChange}
+                   
+                    sx={{
+                      "&:focused": {
+                        borderColor: "black",
+                     
+                      },
+                    }}
+                  >
+                    {Array.from({ length: 100 }, (_, i) => (
+                      <MenuItem key={i + 1} value={`Sprint ${i + 1}`}>
+                        Sprint {i + 1}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <Box mt={2} /> 
                 <FormControl fullWidth>
                   <TextField
                     id="scenario"
@@ -224,28 +253,7 @@ function Automated() {
                   />
                 </FormControl>
                 <MDBox mt={2} />
-                <FormControl fullWidth>
-                  <InputLabel id="sprint-label">
-                    <FaUsers  /> Select Sprint
-                  </InputLabel>
-                  <Select
-                    labelId="sprint-label"
-                    id="sprint"
-                    value={selectedSprint}
-                    onChange={handleSprintChange}
-                    sx={{
-                      "&:focused": {
-                        borderColor: "black",
-                      },
-                    }}
-                  >
-                    {Array.from({ length: 100 }, (_, i) => (
-                      <MenuItem key={i + 1} value={`Sprint ${i + 1}`}>
-                        Sprint {i + 1}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+              
                 <MDBox mt={2} />
               <FormControl fullWidth>
               <InputLabel id="sprint-label">
