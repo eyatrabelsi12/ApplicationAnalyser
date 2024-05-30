@@ -14,13 +14,10 @@ import TextField from '@mui/material/TextField';
 import './style.css';
  
 import MDBox from "components/MDBox";
-import successSound from './success3.mp3';
-import errorSound from './error4.wav';
 
 
-// Créez des instances de Audio
-const successAudio = new Audio(successSound);
-const errorAudio = new Audio(errorSound);
+
+
  
 async function saveDataToDatabase(fileName, fileId, fileData, fichier_id, nom_fichier) {
   // Logique de sauvegarde des données dans la base de données
@@ -67,11 +64,11 @@ function FileUploader() {
       const alertDiv = document.createElement('div');
       alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 50%; transform: translate(-50%, -50%); padding: 20px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
       alertDiv.innerHTML = `
-        Veuillez remplir tous les champs.
+      Please fill in all fields
         <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
       `;
       document.body.appendChild(alertDiv);
-      errorAudio.play();  // Jouer le son d'erreur
+    
       return;
     }
  
@@ -109,11 +106,11 @@ function FileUploader() {
         const alertDiv = document.createElement('div');
         alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 50%; transform: translate(-50%, -50%); padding: 20px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
         alertDiv.innerHTML = `
-          Fichier JSON chargé avec succès
+        File loaded successfully
           <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
         `;
         document.body.appendChild(alertDiv);
-        successAudio.play();
+      
  
         console.log('Réponse du serveur :', response.data);
       } catch (error) {
@@ -125,7 +122,7 @@ function FileUploader() {
             <button style="width: 13%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 85%;" onclick="this.parentNode.remove()">OK</button>
           `;
           document.body.appendChild(alertDiv);
-          errorAudio.play(); 
+       
         } else {
           const alertDiv = document.createElement('div');
           alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 50%; transform: translate(-50%, -50%); padding: 20px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');

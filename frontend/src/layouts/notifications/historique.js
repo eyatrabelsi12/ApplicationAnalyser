@@ -87,8 +87,19 @@ const CercleDeRapportPage = () => {
 
     const handleSubmit = (event) => {
         event.preventDefault();
-        handleFetchData();
+        if (!selectedFile) {
+            const alertDiv = document.createElement('div');
+            alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 50%; transform: translate(-50%, -50%); padding: 20px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
+            alertDiv.innerHTML = `
+                Please select a file
+                <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
+            `;
+            document.body.appendChild(alertDiv);
+        } else {
+            handleFetchData();
+        }
     };
+    
 
     const getTotalFeatureCount = (featureSummary) => {
         let totalFeatures = 0;

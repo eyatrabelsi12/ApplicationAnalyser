@@ -97,8 +97,15 @@ const Register = () => {
     } catch (error) {
       console.error('Error during registration:', error);
       if (error.response && error.response.data && error.response.data.message === 'This email is already registered.') {
-        alertWithBackground('This email is already registered.');
-      } else {
+        const alertDiv = document.createElement('div');
+        alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 53%; transform: translate(-50%, -50%); padding: 20px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
+        alertDiv.innerHTML = `
+            This email is already registered.
+            <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
+        `;
+        document.body.appendChild(alertDiv);
+    }
+     else {
         alertWithBackground('Unable to register. Please try again.');
       }
     }
