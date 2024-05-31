@@ -33,8 +33,8 @@ const colors = {
     },
   },
   text: {
-    main: "#ffffffcc",
-    focus: "#ffffffcc",
+    main: "#ffffff", // Changed to white
+    focus: "#ffffff", // Changed to white
   },
 
   transparent: {
@@ -73,8 +73,8 @@ const colors = {
   },
 
   warning: {
-    main: "#fb8c00",
-    focus: "#fc9d26",
+    main: "#f2f235",
+    focus: "#f2f235",
   },
 
   error: {
@@ -88,10 +88,10 @@ const colors = {
   },
 
   dark: {
-    main: "#344767",
-    focus: "#2c3c58",
+    main: "#ffffff",
+    focus: "#ffffff",
   },
-
+ 
   grey: {
     100: "#f8f9fa",
     200: "#f0f2f5",
@@ -126,15 +126,14 @@ const colors = {
     },
 
     warning: {
-      main: "#FFA726",
-      state: "#FB8C00",
+      main: "#f4f409",
+      state: "#f4f409",
     },
 
     error: {
       main: "#EF5350",
       state: "#E53935",
     },
-
     light: {
       main: "#EBEFF4",
       state: "#CED4DA",
@@ -233,7 +232,6 @@ const colors = {
       background: "#ffd59f",
       text: "#c87000",
     },
-
     error: {
       background: "#fcd3d0",
       text: "#f61200",

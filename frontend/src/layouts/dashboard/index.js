@@ -171,9 +171,6 @@ const [hoveredIndex, setHoveredIndex] = useState(null);
     const handleMouseLeave = () => {
         setHoveredIndex(null);
     };
- 
- 
- 
     const handleSearch = (value) => {
         setSearchTerm(value);
         const filteredData = initialTableData.filter(data =>
@@ -260,10 +257,6 @@ const [hoveredIndex, setHoveredIndex] = useState(null);
             console.log('Option from suiteOptions selected, doing nothing.');
         }
     };
-   
-   
-   
- 
     const toggleChartSize1 = () => {
         setIsChartExpanded1(!isChartExpanded1);
         setIsGraphExpanded1(!isGraphExpanded1); // Inversez l'état de isGraphExpanded1
@@ -395,8 +388,6 @@ const fetchData1 = async () => {
    
         fetchData();
       }, [selectedPeriod, selectedSuite]); // Mettre à jour les données lorsque la période ou la suite sélectionnée change
-   
-   
     return (
        
         <DashboardLayout>
@@ -489,15 +480,16 @@ const fetchData1 = async () => {
                     <Grid container spacing={2} style={{marginLeft:'1px'}}>
                     <Grid item xs={12} md={6}>
                     <Card
-                           style={{
-                            width: isChartExpanded1 ? "158vh" : "486px",
-                            height: isChartExpanded1 ? "85vh" : "310px",
-                            position: isChartExpanded1 ? "fixed" : "static",
-                            top: isChartExpanded1 ? "129%" : "auto",
-                            left: isChartExpanded1 ? "60%" : "auto",
-                            transform: isChartExpanded1 ? "translate(-50%, -136%)" : "none",
-                            zIndex: isChartExpanded1 ? 999 : "auto",
-                        }}>          
+  style={{
+    width: isChartExpanded1 ? "1050px" : "500px",  // Fixed width
+    height: isChartExpanded1 ? "580px" : "309px",  // Fixed height
+    position: isChartExpanded1 ? "fixed" : "static",
+    top: isChartExpanded1 ? "129%" : "auto",
+    left: isChartExpanded1 ? "60%" : "auto",
+    transform: isChartExpanded1 ? "translate(-50%, -136%)" : "none",
+    zIndex: isChartExpanded1 ? 999 : "auto",
+  }}
+>       
                             <CardContent >
                             <div style={{fontFamily:'italic',fontSize:'100%',color:'gray',marginLeft: isGraphExpanded1 ? '119px' : '39%'}}>Histogramme Analyzer</div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'Arial', fontSize: '80%', color: "gray" }}>
@@ -531,20 +523,20 @@ const fetchData1 = async () => {
                                     </div>
        
                                     <div>
-                                    <select value={selectedCategory} onChange={(e) => handleCategoryChange(e.target.value)} style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'Arial', fontSize: '80%', color: "gray", borderColor: "red", marginLeft: isGraphExpanded1 ? '88px' : '230%' }}>
-    <option value="web-ui">Web-UI</option>
-    <option value="dataManagement">Data Management</option>
-    <option value="RestAPI">RestAPI</option>
-    <option value="Navigations">Navigation</option>
-    {suiteOptions.map((option) => (
-        <option key={option} value={option}>
-            {option}
-        </option>
-    ))}
-</select>
+                                        <select value={selectedCategory} onChange={(e) => handleCategoryChange(e.target.value)} style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'Arial', fontSize: '80%', color: "gray", borderColor: "red" ,marginLeft: isGraphExpanded1 ? '88px' : '250%' }}>
+                                            <option value="web-ui">Web-UI</option>
+                                            <option value="dataManagement">Data Management</option>
+                                            <option value="RestAPI">RestAPI</option>
+                                            <option value="Navigations">Navigation</option>
+                                             {suiteOptions.map((option) => (
+                <option key={option} value={option}>
+                    {option}
+                </option>
+            ))}
+                                        </select>
                                        
                                     </div>
-                                    <div onClick={toggleChartSize1 } style={{ fontFamily: 'Arial', fontSize: '100%', color: "gray",marginLeft:'-7px',marginTop:'-2px'}}>
+                                    <div onClick={toggleChartSize1 } style={{ fontFamily: 'Arial', fontSize: '100%', color: "gray",marginLeft:'-10px',marginTop:'-2px'}}>
         {isChartExpanded1 ? <OpenInNewOffIcon/> : <OpenInNewIcon/>}
        
     </div>
@@ -686,18 +678,19 @@ const fetchData1 = async () => {
                         </Card>
                    </Grid>
                    <Grid item xs={12} md={6}>
-                   <Card style={{
-         width: isChartExpanded2 ? "155vh" : "495px",
-        position: isChartExpanded2 ? "fixed" : "static",
-        top: isChartExpanded2 ? "76%" : "auto",
-        left: isChartExpanded2 ? "60%" : "auto",
-        transform: isChartExpanded2 ? "translate(-50%, -73%)" : "none",
-        zIndex: isChartExpanded2 ? 999 : "auto",
-    }}>          
+                   <Card
+  style={{
+    width: isChartExpanded2 ? "1050px" : "503px",  // Fixed width
+    position: isChartExpanded2 ? "fixed" : "static",
+    top: isChartExpanded2 ? "75%" : "auto",
+    left: isChartExpanded2 ? "60%" : "auto",
+    transform: isChartExpanded2 ? "translate(-50%, -73%)" : "none",
+    zIndex: isChartExpanded2 ? 999 : "auto",
+  }}
+>
  
     <CardContent>
     <div style={{fontFamily:'italic',color:'gray',marginLeft: isGraphExpanded2 ? '119px' : '39%',Size:'20%'}}>KPI Suite Test Automation</div>
-    
         <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'Arial', fontSize: '80%', color: "gray"}}>
             <select value={selectedPeriod} onChange={(e) => handlePeriodChange(e.target.value)} style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'Arial', fontSize: '80%', color: "gray", borderColor: "red",marginLeft:'90%'}}>
                 <option value="6months">6 mois</option>
@@ -728,8 +721,6 @@ const fetchData1 = async () => {
             <Line data={chartData} />
         )}
     </CardContent>
- 
- 
                         </Card>
                         </Grid>
                     </Grid>
@@ -780,6 +771,7 @@ const fetchData1 = async () => {
         <PlaylistAddCheckIcon style={{ color: 'black' }} /> Action
     </TableCell>
 )}
+
                 </TableRow>
                 <TableBody>
                     {tableData
@@ -829,7 +821,7 @@ const fetchData1 = async () => {
                             />
                         </div>
                     </TableCell>
-                    <TableCell style={{ fontFamily: 'italic', fontSize: '95%',textAlign:'center' }}>
+                                    <TableCell style={{ fontFamily: 'italic', fontSize: '95%',textAlign:'center' }}>
                                         {data.bugs_on_jira - data.faux_bugs}
                                     </TableCell>
                                     <TableCell>
@@ -857,7 +849,8 @@ const fetchData1 = async () => {
             )
         )}
     </TableCell>
-                                    </TableCell>
+</TableCell>
+
                                 </TableRow>
                             );
                         })}
@@ -879,23 +872,12 @@ const fetchData1 = async () => {
                 <MenuItem value={-1}>All</MenuItem>
             </Select>
         </div>
+ 
         </TableContainer>
- 
- 
- 
- 
- 
-   
         </Card>
     </Grid>
-</Grid>
- 
- 
- 
-                   
+</Grid> 
                 </Grid>
-               
-               
             </MDBox>
         </DashboardLayout>
     );

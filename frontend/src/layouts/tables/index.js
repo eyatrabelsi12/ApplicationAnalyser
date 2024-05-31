@@ -10,7 +10,8 @@ import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
 import { faCheckCircle, faNotEqual, faEquals } from '@fortawesome/free-solid-svg-icons';
 import { FormControl, InputLabel, Select, MenuItem, Button, Box } from '@mui/material';
 import { faLink } from '@fortawesome/free-solid-svg-icons';
- 
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'; // Importez l'icône de flèche vers le bas de Material-UI
+import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp'; // Importez l'icône de flèche vers le haut de Material-UI
 import { styled } from '@mui/material/styles';
  
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
@@ -33,7 +34,7 @@ import SubjectIcon from '@mui/icons-material/Subject';
 import ImageIcon from '@mui/icons-material/Image';
 import axios from 'axios';
 import 'chart.js/auto';
- 
+
 import Chart from 'chart.js/auto';
 import { Pie } from 'react-chartjs-2';
 import { Doughnut } from 'react-chartjs-2';
@@ -59,9 +60,24 @@ function Tables() {
     searchFeature: '',
     searchName: ''
   });
-  const [error, setError] = useState(null);
- 
- 
+  const [showError, setShowError] = useState({});
+  const [showScreenShot, setShowScreenShot] = useState({});
+  // Fonction pour inverser l'état du bouton lorsqu'il est cliqué
+  const toggleError = (testName) => {
+    setShowError((prev) => ({
+      ...prev,
+      [testName]: !prev[testName],
+    }));
+  };
+  const toggleScreenShot = (testName) => {
+    // Logique pour basculer l'état du screenshot
+    // Par exemple :
+    setShowScreenShot((prevState) => ({
+      ...prevState,
+      [testName]: !prevState[testName]
+    }));
+  };
+  
   const [selectedTest, setSelectedTest] = useState(null);
   const [showColumns, setShowColumns] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
@@ -75,12 +91,12 @@ function Tables() {
   const [testNameDistinctCounts, setTestNameDistinctCounts] = useState({});
   const extractType = (fileName) => {
     const parts = fileName.split('_');
-    return parts[0];
+    return parts[0]; 
 };
- 
+
   useEffect(() => {
     fetchLastFiles();
- 
+
     // Ajouter les styles globaux pour les options de sélection
     const style = document.createElement('style');
     style.innerHTML = `
@@ -90,13 +106,14 @@ function Tables() {
       }
     `;
     document.head.appendChild(style);
- 
+
     // Nettoyer les styles lorsque le composant se démonte
     return () => {
       document.head.removeChild(style);
     };
   }, []);
- 
+  
+
   const fetchLastFiles = async () => {
     try {
       const response = await fetch('http://localhost:3008/lastfiles');
@@ -127,13 +144,13 @@ function Tables() {
  
   const fetchFeatures = async () => {
     try {
-     
+      
 const Type1 = extractType(fileName1);
 const Type2 = extractType(fileName2);
- 
- 
- 
- 
+
+
+
+
 if (Type1 !== Type2) {
   const alertDiv = document.createElement('div');
   alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 57%; transform: translate(-50%, -50%); padding: 20px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
@@ -149,7 +166,7 @@ if (Type1 !== Type2) {
         const alertDiv = document.createElement('div');
         alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 59%; transform: translate(-50%, -50%); padding: 20px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
         alertDiv.innerHTML = `
-        Submit two different reports
+        Enter two different reports.
           <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
         `;
         document.body.appendChild(alertDiv);
@@ -159,7 +176,7 @@ if (Type1 !== Type2) {
         const alertDiv = document.createElement('div');
         alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 50%; transform: translate(-50%, -50%); padding: 20px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
         alertDiv.innerHTML = `
-        Please enter the names of the two files
+        Please enter the names of both files.
           <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
         `;
         document.body.appendChild(alertDiv);
@@ -247,41 +264,41 @@ if (Type1 !== Type2) {
           build_hash: fileInfoData[1]?.build_hash|| '',
         });
         const testNameCounts = {};
-        const testNameDistinctCounts = {}; // Nouvel objet pour stocker le nombre de TestName distincts
-       
+        const testNameDistinctCounts = {};
+        
         await Promise.all(data.map(async (feature) => {
             const response = await fetch(`http://localhost:3008/tests/by-feature?featureName=${encodeURIComponent(feature.FeatureName)}&fileName1=${encodeURIComponent(fileName1)}&fileName2=${encodeURIComponent(fileName2)}`);
             if (!response.ok) {
                 throw new Error('Erreur lors de la récupération des noms de test');
             }
             const testNamesData = await response.json();
-           
+        
             // Concaténer tous les noms de test dans un tableau pour chaque featureName
             const allTestNames = testNamesData.flatMap(test => test.testName);
             testNameCounts[feature.FeatureName] = allTestNames.length;
-           
+        
             // Utiliser un ensemble pour compter les TestName distincts
             const testNameSet = new Set(allTestNames);
             testNameDistinctCounts[feature.FeatureName] = testNameSet.size;
- 
+        
             // Initialiser les compteurs pour les anciens et les nouveaux statuts
             let previousStatusCounts = { skipped: 0, passed: 0, failed: 0, pending: 0 };
             let currentStatusCounts = { skipped: 0, passed: 0, failed: 0, pending: 0 };
- 
-            // Compter les occurrences de chaque statut pour chaque testName
+        
+            // Compter les occurrences de chaque statut pour chaque testName, y compris les doublons
             testNamesData.forEach(test => {
                 // Incrémenter les compteurs pour les anciens statuts
                 previousStatusCounts[test.stepStatusFile1]++;
-           
+        
                 // Incrémenter les compteurs pour les nouveaux statuts
                 currentStatusCounts[test.stepStatusFile2]++;
             });
- 
+        
             // Mettre à jour les propriétés PreviousStatusCounts et CurrentStatusCounts dans l'objet feature
             feature.PreviousStatusCounts = previousStatusCounts;
             feature.CurrentStatusCounts = currentStatusCounts;
         }));
- 
+        
         // Mettre à jour les états
         setTestNameCounts(testNameCounts);
         setTestNameDistinctCounts(testNameDistinctCounts);
@@ -326,8 +343,8 @@ const data = {
   datasets: [
       {
           data: [passedPercentage2 , failedPercentage2 , skippedPercentage2 , pendingPercentage2 ],
-          backgroundColor: ['#11c143', '#ff0000', '#3598db', '#ffff00'],
-          hoverBackgroundColor: ['#11c143', '#ff0000', '#3598db', '#ffff00'],
+          backgroundColor: ['#08c999', '#ff0000', '#3598db', '#ffff00'],
+          hoverBackgroundColor: ['#08c999', '#ff0000', '#3598db', '#ffff00'],
           labels: [
             `${passedPercentage}%`,
             `${failedPercentage}%`,
@@ -342,8 +359,8 @@ const data1 = {
   datasets: [
     {
       data: [passedPercentage, failedPercentage, skippedPercentage, pendingPercentage],
-      backgroundColor: ['#11c143', '#ff0000', '#3598db', '#ffff00'],
-      hoverBackgroundColor: ['#11c143', '#ff0000', '#3598db', '#ffff00'],
+      backgroundColor: ['#08c999', '#ff0000', '#3598db', '#ffff00'],
+      hoverBackgroundColor: ['#08c999', '#ff0000', '#3598db', '#ffff00'],
       labels: [
         `${passedPercentage}%`,
         `${failedPercentage}%`,
@@ -451,7 +468,7 @@ function cleanSpecialCharacters(str, keepHyphen = false) {
       <MDBox pt={2} pb={3}>
         <Grid container spacing={6}>
           <Grid item xs={12}>
-            <Card>
+            <Card >
               <MDBox
                 mx={2}
                 mt={-3}
@@ -474,7 +491,7 @@ function cleanSpecialCharacters(str, keepHyphen = false) {
           </div>
         </div>
       )}
-              <MDBox pt={2} style={{ maxHeight: '80vh', overflow: 'auto' }}>
+              <MDBox pt={2} style={{ maxHeight: '200vh', overflow: 'auto' }}>
                 <div className="compare-page">
                 <div>
                 <FormControl variant="outlined" style={{ width: '30%', marginRight: '90px',marginLeft:'20px'}}>
@@ -505,8 +522,8 @@ function cleanSpecialCharacters(str, keepHyphen = false) {
     ))}
   </Select>
 </FormControl>
- 
- 
+
+
           <Button
             onClick={fetchFeatures}
             variant="contained"
@@ -514,11 +531,9 @@ function cleanSpecialCharacters(str, keepHyphen = false) {
           >
             Compare
           </Button>
- 
-          {error && <p className="error">Erreur: {error}</p>}
         </div>
-       
                   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'start', width: '40%' }}>
+                 
                   {isComparisonDone && (
     <Card style={{ backgroundColor: 'rgb(249, 249, 249)', width: '500px', top: '5px', borderColor: '', marginRight: '10px' }}>
     <CardContent style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', fontSize: '6.2px', fontFamily: 'Arial', height: '299px' }}>
@@ -571,19 +586,32 @@ function cleanSpecialCharacters(str, keepHyphen = false) {
                     <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(150, 142, 142)', marginLeft: '-50px'}}>{fileInfo1.total_pending}</Typography>
                 </div>
                 <div>
-                <Doughnut data={data1} style={{marginLeft:'60%',marginTop:'-55%'}} options={options} />
+                <Doughnut
+  data={data1}
+  style={{
+    width: '145px',    // Fixed width
+    height: '145px',   // Fixed height
+    marginLeft: '215px',
+    marginRight: 'auto',
+    marginTop:'-199px',
+    display: 'block',
+  }}
+  options={options}
+/>
+
                 </div>
             </div>
         </div>
     </CardContent>
 </Card>
- 
+
 )}
+
   {isComparisonDone && (
 <div style={{ fontSize: '130%', fontFamily: 'Italic', color: 'rgb(107, 103, 103)' ,fontWeight: 'bold',marginLeft:'-6px',marginRight:'6px',marginTop:'110px' }}>VS</div>
  )}
  
-   {isComparisonDone && (
+ {isComparisonDone && (
    
 <Card style={{ backgroundColor: 'rgb(249, 249, 249)', width: '500px', top: '5px', borderColor: '', marginRight: '-500px' }}>
     <CardContent style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', fontSize: '6.2px', fontFamily: 'Arial', height: '299px' }}>
@@ -631,7 +659,18 @@ function cleanSpecialCharacters(str, keepHyphen = false) {
                     <Typography variant="body1" style={{ fontSize: '200%', fontFamily: 'Arial', color: 'rgb(150, 142, 142)' ,marginLeft:'14px'}}>{fileInfo2.total_pending}</Typography>
                 </div>
                 <div style={{marginLeft:'58%',marginTop:'-59%'}}>
-                <Doughnut data={data} style={{}} options={options1}  />
+                <Doughnut
+  data={data}
+  style={{
+    width: '144px',    // Fixed width
+    height: '144px',   // Fixed height
+    marginLeft: '10px',
+    marginRight: 'auto',
+    marginTop:'2px',
+    display: 'block',
+  }}
+  options={options}
+/>
                 </div>
  
         </div>
@@ -806,8 +845,58 @@ function cleanSpecialCharacters(str, keepHyphen = false) {
     {testName.replace('@', '')}
   </a>
 </td>
- 
-              <td>{testPair.testName[index*0]}</td>
+<td>
+  {testPair.testName[index * 0]}
+
+  {testPair.errorMessageFile1 || testPair.errorMessageFile2 ? (
+    <div onClick={() => toggleError(testName)} style={{ display: 'flex', alignItems: 'center' }}>
+      <div style={{ display: 'flex', alignItems: 'center', color: 'red' }}>
+        {showError[testName] ? <ArrowDropUpIcon style={{ color: 'red' }} /> : <ArrowDropDownIcon style={{ color: 'red' }} />}
+        {/* Afficher le message d'erreur à côté de l'icône */}
+        <p>show Error</p>
+      </div>
+    </div>
+  ) : null}
+  {/* Afficher les messages d'erreur si le bouton est cliqué */}
+  {showError[testName] && (
+    <div>
+    {/* Afficher ErrorMessageExecution1 s'il est défini */}
+    {testPair.errorMessageFile1 && (
+      <p style={{ color: 'red' }}>- ErrorMessageExecution1 <br></br>{testPair.errorMessageFile1}</p>
+    )}
+    {/* Afficher ErrorMessageExecution2 s'il est défini */}
+    {testPair.errorMessageFile2 && (
+      <p style={{ color: 'red' }}>- ErrorMessageExecution2<br></br> {testPair.errorMessageFile2}</p>
+    )}
+  </div>
+  )}
+   {testPair.imageDataFile1 || testPair.imageDataFile2 ? (
+    <div onClick={() => toggleScreenShot(testName)} style={{ display: 'flex', alignItems: 'center' }}>
+      <div style={{ display: 'flex', alignItems: 'center', color: 'red' }}>
+        {showScreenShot[testName] ? <ArrowDropUpIcon style={{ color: 'red' }} /> : <ArrowDropDownIcon style={{ color: 'red' }} />}
+        {/* Afficher le message d'erreur à côté de l'icône */}
+        <p>ScreenShot</p>
+      </div>
+    </div>
+  ) : null}
+
+  {/* Afficher les screenshots si le bouton est cliqué */}
+  {showScreenShot[testName] && (
+    <div>
+      {/* Afficher le screenshot de ErrorMessageExecution1 s'il est défini */}
+      {testPair.imageDataFile1 && (
+        <p>- ScreenshotExecution1 <img src={`data:image/png;base64,${testPair.imageDataFile1}`} alt="Screenshot"style={{ width: '600px', height: '300px' }}   className="hoverable-image" /></p>
+      )}
+      {/* Afficher le screenshot de ErrorMessageExecution2 s'il est défini */}
+      {testPair.imageDataFile2 && (
+      <p>- ScreenshotExecution2 <img src={`data:image/png;base64,${testPair.imageDataFile2}`} alt="Screenshot" style={{ width: '600px', height: '300px' }}  className="hoverable-image"  /></p>
+
+      )}
+    </div>
+  )}
+</td>
+
+
               <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
               <FontAwesomeIcon
    icon={statusIcon === 'difference-icon' ? faNotEqual : faEquals}
@@ -872,7 +961,11 @@ function cleanSpecialCharacters(str, keepHyphen = false) {
                     background-color:rgb(247, 245, 244);
                     color: black;
                   }
- 
+                  .hoverable-image:hover {
+                    transform: scale(1.5); /* Augmente la taille de l'image de 1.5x */
+                    transition: transform 0.3s ease; /* Ajoute une transition fluide */
+                    margin-left: 80px; /* Ajoute un décalage sur le côté droit de l'image agrandie */
+                  }
                   .input-section button {
                     padding: 5px 10px;
                     background-color: rgb(97, 197, 164);

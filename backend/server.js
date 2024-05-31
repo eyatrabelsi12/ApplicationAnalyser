@@ -50,47 +50,54 @@ const verifyToken = (req, res, next) => {
     next();
   });
 };
-
 app.post('/automated', verifyToken, async (req, res) => {
   const { scenario, testCases, bugsOnJira, selectedSprint, fauxBugsNumber, suite } = req.body;
-  const { user_id, username, role } = req.user;
+  const { id: user_id, username, role } = req.user;
 
   try {
-      const result = await pool.query(
-        'INSERT INTO automated_data (scenario, test_cases, bugs_on_jira, selected_sprint, suite, user_id, username, faux_bugs) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
-        [scenario, testCases, bugsOnJira, selectedSprint, suite, user_id, username, fauxBugsNumber]
-      );
-      const insertedData = result.rows[0];
-      res.status(200).json({ success: true, message: 'Data inserted successfully', data: insertedData });
+    // Vérifiez d'abord si l'utilisateur avec l'ID spécifié existe dans la table "users"
+    const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [user_id]);
+    const user = userResult.rows[0];
+    if (!user) {
+      // Si l'utilisateur n'existe pas, renvoyez une erreur
+      throw new Error(`User with ID ${user_id} does not exist.`);
+    }
+
+    // Insérez les données dans la table "automated_data" une fois la vérification réussie
+    const result = await pool.query(
+      'INSERT INTO automated_data (scenario, test_cases, bugs_on_jira, selected_sprint, suite, user_id, username, faux_bugs) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+      [scenario, testCases, bugsOnJira, selectedSprint, suite, user_id, username, fauxBugsNumber]
+    );
+    const insertedData = result.rows[0];
+    res.status(200).json({ success: true, message: 'Data inserted successfully', data: insertedData });
   } catch (error) {
-      console.error('Error inserting data:', error);
-      res.status(500).json({ success: false, message: 'An error occurred while inserting data' });
+    console.error('Error inserting data:', error);
+    res.status(500).json({ success: false, message: 'An error occurred while inserting data' });
   }
 });
-
 app.post('/insert-data', async (req, res) => {
   try {
       const { fileName, file: fileData, buildHash, type } = req.body;
- 
+
       if (!fileName || !fileData || !buildHash || !type) {
           throw new Error('Certains champs requis sont manquants dans la requête.');
       }
- 
+
       // Vérifier si le build hash existe déjà dans la table
       const fileExists = await checkFileExists(buildHash);
- 
+
       if (fileExists) {
           return res.status(409).json({ alert: `Le fichier est déjà stocké dans la base de données.` });
       } else {
           // Enregistrer le nom du fichier dans la table des fichiers enregistrés
           const fileId = await saveFileNameToDatabase(fileName, buildHash, type);
- 
+
           // Continuer avec l'enregistrement des données JSON
           await saveDataToDatabase(fileName, fileId, fileData);
- 
+
           // Calculer les pourcentages
           const percentages = await calculatePercentages(fileId);
- 
+
           // Renvoyer les pourcentages et le nom de fichier concaténé au front-end
           res.status(200).json({
               message: 'Données JSON enregistrées avec succès',
@@ -106,7 +113,6 @@ app.post('/insert-data', async (req, res) => {
       res.status(500).json({ error: 'Erreur interne du serveur : ' + error.message });
   }
 });
-
 
 
 app.post('/delete-data', (req, res) => {
@@ -215,6 +221,7 @@ app.delete('/delete-suite-option/:option', async (req, res) => {
 
 
 
+
 async function calculatePercentages(fileId) {
   try {
     const percentagesQuery = `
@@ -242,7 +249,7 @@ async function calculatePercentages(fileId) {
            + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'failed')
            + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'skipped')
            + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'pending')))), 'N', 'C', '%') AS pending_percentage,
-        
+       
         (SELECT MAX(nom_fichier_concatiner) FROM scenarios WHERE fichier_Id = $1) AS concatenated_file_name
       FROM scenarios
       WHERE fichier_Id = $1
@@ -263,9 +270,6 @@ async function calculatePercentages(fileId) {
     throw new Error(`Erreur lors du calcul des pourcentages : ${error.message}`);
   }
 }
-
-
-
 async function checkFileExists(buildHash) {
   console.log("Build Hash:", buildHash);
   const client = await pool.connect();
@@ -281,6 +285,32 @@ async function checkFileExists(buildHash) {
   }
 }
 
+app.get('/latest-file-names', async (req, res) => {
+  try {
+    const latestFileNames = await getLatestFileNames();
+    res.json(latestFileNames);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+ 
+async function getLatestFileNames() {
+  const client = await pool.connect();
+  try {
+    const query = `
+    SELECT DISTINCT nom_fichier_concatiner
+    FROM fichier_enregistres
+    ORDER BY nom_fichier_concatiner DESC
+    LIMIT 10;
+   
+    `;
+    const result = await client.query(query);
+    return result.rows.map(row => row.nom_fichier_concatiner);
+  } finally {
+    client.release();
+  }
+}
 
 
 async function saveDataToDatabase(fileName, fileId, fileData) {
@@ -504,36 +534,26 @@ async function saveFileNameToDatabase(fileName, buildHash, type) {
 }
 
 
-
 async function saveFileNameToDatabase(fileName, buildHash, type) {
   const client = await pool.connect();
   try {
       await client.query('BEGIN');
 
       // Insérer dans la table fichier_enregistres
-      const query = 'INSERT INTO fichier_enregistres (nom_fichier, build_hash, type) VALUES ($1, $2, $3) RETURNING fichier_id';
-      const result = await client.query(query, [fileName, buildHash, type]);
-      const fileId = result.rows[0].fichier_id;
+      const insertQuery = 'INSERT INTO fichier_enregistres (nom_fichier, build_hash, type) VALUES ($1, $2, $3) RETURNING fichier_id';
+      const insertResult = await client.query(insertQuery, [fileName, buildHash, type]);
+      const fileId = insertResult.rows[0].fichier_id;
 
       // Mettre à jour nom_fichier_concatiner en utilisant les données de la table scenarios
       const updateQuery = `
-          UPDATE fichier_enregistres
-          SET nom_fichier_concatiner = (
-              SELECT s.nom_fichier_concatiner
-              FROM scenarios s
-              WHERE s.fichier_id = fichier_enregistres.fichier_id
-              LIMIT 1
-          )
-          WHERE EXISTS (
-              SELECT 1
-              FROM scenarios s
-              WHERE s.fichier_id = fichier_enregistres.fichier_id
-          );
+          UPDATE fichier_enregistres fe
+          SET nom_fichier_concatiner = s.nom_fichier_concatiner
+          FROM scenarios s
+          WHERE s.fichier_id = fe.fichier_id AND fe.fichier_id = $1;
       `;
-      await client.query(updateQuery, []);
+      await client.query(updateQuery, [fileId]);
 
       await client.query('COMMIT');
-
       return fileId;
   } catch (error) {
       await client.query('ROLLBACK');
@@ -542,6 +562,7 @@ async function saveFileNameToDatabase(fileName, buildHash, type) {
       client.release();
   }
 }
+
 
 
  
@@ -620,20 +641,6 @@ function generateConcatenatedFileName(type, name, build_hash, date_enregistremen
 
   return concatenatedFileName;
 }
-
-
-
-
-
-
-
-
-
- 
-
-
-
-
 const formatFileName = (originalFileName) => {
   // Séparez le nom de fichier en différentes parties en utilisant "_" comme délimiteur
   const parts = originalFileName.split('_');
@@ -653,39 +660,39 @@ const formatFileName = (originalFileName) => {
   return `${type}_${name}_${textdate}_${build_hash}.json`;
 };
 
-  app.post('/summary', async (req, res) => {
-    try {
-        const { nom_fichier } = req.body;
- 
-        // Récupérer le fichier_id associé au nom du fichier
-        const fileIdQuery = 'SELECT fichier_id FROM fichier_enregistres WHERE nom_fichier_concatiner = $1';
-        const fileIdResult = await pool.query(fileIdQuery, [nom_fichier]);
-        const formattedFileName = formatFileName(nom_fichier);
- 
-        // Vérifier si la requête a retourné des résultats
-        if (fileIdResult.rows.length === 0) {
-            return res.status(404).json({ error: "Ce rapport n'existe pas dans la base" });
-        }
- 
-        const fileId = fileIdResult.rows[0].fichier_id;
- 
-        const totalTestNamesQuery = `
-            SELECT COUNT(DISTINCT testname) AS total_testnames
-            FROM scenarios
-            WHERE fichier_Id = $1
-        `;
-        const totalTestNamesResult = await pool.query(totalTestNamesQuery, [fileId]);
-        const totalTestNames = totalTestNamesResult.rows[0].total_testnames;
- 
-        const totalPassedQuery = `
-        SELECT COUNT(DISTINCT testname) AS total_testnames
-        FROM scenarios
-        WHERE fichier_Id = $1 and stepstatus='passed'
-    `;
-    const totalfailedQuery = `
-    SELECT COUNT(DISTINCT testname) AS total_testnames
-    FROM scenarios
-    WHERE fichier_Id = $1 and stepstatus='failed'
+app.post('/summary', async (req, res) => {
+  try {
+      const { nom_fichier } = req.body;
+
+      // Récupérer le fichier_id associé au nom du fichier
+      const fileIdQuery = 'SELECT fichier_id FROM fichier_enregistres WHERE nom_fichier_concatiner = $1';
+      const fileIdResult = await pool.query(fileIdQuery, [nom_fichier]);
+      const formattedFileName = formatFileName(nom_fichier);
+
+      // Vérifier si la requête a retourné des résultats
+      if (fileIdResult.rows.length === 0) {
+          return res.status(404).json({ error: "Ce rapport n'existe pas dans la base" });
+      }
+
+      const fileId = fileIdResult.rows[0].fichier_id;
+
+      const totalTestNamesQuery = `
+          SELECT COUNT(DISTINCT testname) AS total_testnames
+          FROM scenarios
+          WHERE fichier_Id = $1
+      `;
+      const totalTestNamesResult = await pool.query(totalTestNamesQuery, [fileId]);
+      const totalTestNames = totalTestNamesResult.rows[0].total_testnames;
+
+      const totalPassedQuery = `
+      SELECT COUNT(DISTINCT testname) AS total_testnames
+      FROM scenarios
+      WHERE fichier_Id = $1 and stepstatus='passed'
+  `;
+  const totalfailedQuery = `
+  SELECT COUNT(DISTINCT testname) AS total_testnames
+  FROM scenarios
+  WHERE fichier_Id = $1 and stepstatus='failed'
 `;
 const totalskippedQuery = `
 SELECT COUNT(DISTINCT testname) AS total_testnames
@@ -697,185 +704,156 @@ SELECT COUNT(DISTINCT testname) AS total_testnames
 FROM scenarios
 WHERE fichier_Id = $1 and stepstatus='pending'
 `;
-        // Requête pour récupérer la première date valide dans le texte
-        const textdateQuery = `
-            SELECT
-                textdate
-            FROM
-                scenarios
-            WHERE
-                fichier_Id = $1
-                AND textdate IS NOT NULL
-                AND textdate ~* '\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z'
-            ORDER BY
-                textdate
-            LIMIT 1
-        `;
- 
-        const textdateResult = await pool.query(textdateQuery, [fileId]);
-        let textdate = null;
- 
-        if (textdateResult.rows.length > 0) {
-            textdate = textdateResult.rows[0].textdate;
-        }
- 
-        // Récupérer les statistiques pour le fichier_id donné
-        // Récupérer les statistiques pour le fichier_id donné
-        const summaryQuery = `
-        SELECT
-        CASE
-            WHEN name_3 = '@WEB-UI' THEN 'WEB-UI Automated Tests'
-            WHEN name_3 = '@Data_Management' THEN 'Data_Management Automated Tests'
-            WHEN name_3 = '@REST' THEN 'REST Automated Tests'
-            WHEN name_3 = '@Navigation' THEN 'Navigation Automated Tests'
-            WHEN name_2 IN ('@Data_Management','@WEB-UI', '@REST', '@Navigation') THEN REPLACE(name_2, '@', '') || '-Automated Tests'
-            ELSE NULL -- Dans le cas où aucun des cas ci-dessus n'est vérifié
-        END AS tag,
-       
-        (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'passed') AS total_passed,
-        (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'failed') AS total_failed,
-        (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'skipped') AS total_skipped,
-        (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'pending') AS total_pending,
-        ((SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'passed')
-         + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'failed')
-         + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'skipped')
-         + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'pending')) AS total_steps,
-        (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1) AS total_testname,
-        $2 AS first_textdate,
-        (SELECT type FROM scenarios WHERE fichier_Id = $1 AND textdate IS NOT NULL ORDER BY textdate LIMIT 1) AS first_type,
-        (SELECT Build_hash FROM scenarios WHERE fichier_Id = $1 LIMIT 1) AS build_hash, -- Ajout de Build_hash
-        CONCAT(FORMAT('%s', ((SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'passed') * 100.0 /
-            ((SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'passed')
-             + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'failed')
-             + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'skipped')
-             + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'pending')))), 'N', 'C', '%') AS passed_percentage,
-       
-       
-    CONCAT(FORMAT('%s', ((SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'failed') * 100.0 /
-        ((SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'passed')
-         + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'failed')
-         + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'skipped')
-         + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'pending')))), 'N', 'C', '%') AS failed_percentage,
-       
-    CONCAT(FORMAT('%s', ((SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'skipped') * 100.0 /
-        ((SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'passed')
-         + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'failed')
-         + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'skipped')
-         + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'pending')))), 'N', 'C', '%') AS skipped_percentage,
-       
-    CONCAT(FORMAT('%s', ((SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'pending') * 100.0 /
-        ((SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'passed')
-         + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'failed')
-         + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'skipped')
-         + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'pending')))), 'N', 'C', '%') AS pending_percentage
-   
-   
-    FROM
-        scenarios
-    WHERE
-        fichier_Id = $1
-        AND (name_3 IN ('@WEB-UI','@Data_Management', '@REST', '@Navigation') OR name_2 IN ('@WEB-UI','@Data_Management', '@REST', '@Navigation'))
-    GROUP BY
-        tag
-    ORDER BY
-        tag
-    LIMIT 1;
-   
-   
-   
- 
-   
-       
-`;
- 
- 
-        const summaryResult = await pool.query(summaryQuery, [fileId, textdate]);
-        let summary = summaryResult.rows[0]; // On suppose qu'il n'y a qu'une seule ligne de résultats
- 
-        // Modifier les valeurs de tag
-        if (summary.tag === '@WEB-UI') {
-            summary.tag = 'WEB-UI Automated Tests';
-        } else if (summary.tag === '@Data_Management' || summary.tag === '@REST' || summary.tag === '@Navigation') {
-            summary.tag = summary.tag.replace('@', '') + ' Automated Tests';
-        }
-     
-       
-        const percentages = {
-            passed: parseFloat((summary.total_passed / summary.total_steps * 100).toFixed(2)),
-            failed: parseFloat((summary.total_failed / summary.total_steps * 100).toFixed(2)),
-            skipped: parseFloat((summary.total_skipped / summary.total_steps * 100).toFixed(2)),
-            pending: parseFloat((summary.total_pending / summary.total_steps * 100).toFixed(2))
-        };
-       
- 
-        // Récupérer les statistiques pour le fichier_id donné
-        const featureSummaryQuery = `
-            SELECT
-                COUNT(DISTINCT CASE WHEN stepstatus = 'passed' THEN featurename END) AS total_passed,
-                COUNT(DISTINCT CASE WHEN stepstatus = 'failed' THEN featurename END) AS total_failed
-            FROM
-                scenarios
-            WHERE
-                fichier_Id = $1
-        `;
- 
-        const featureSummaryResult = await pool.query(featureSummaryQuery, [fileId]);
-        const featureSummary = featureSummaryResult.rows;
- 
-        console.log('Feature Summary:', featureSummary); // Ajoutez ce log pour vérifier si featureSummary est correctement récupéré
- 
-        res.json({ summary, percentages, featureSummary });
-    } catch (error) {
-        console.error('Error retrieving summary:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
-app.get('/lastfiles', async (req, res) => {
-  try {
-      const lastFilesQuery = `
-          SELECT nom_fichier_concatiner
-          FROM fichier_enregistres
-          ORDER BY date_enregistrement DESC
-          LIMIT 20;
+      // Requête pour récupérer la première date valide dans le texte
+      const textdateQuery = `
+          SELECT
+              textdate
+          FROM
+              scenarios
+          WHERE
+              fichier_Id = $1
+              AND textdate IS NOT NULL
+              AND textdate ~* '\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z'
+          ORDER BY
+              textdate
+          LIMIT 1
       `;
-      const lastFilesResult = await pool.query(lastFilesQuery);
-      const lastFiles = lastFilesResult.rows.map(file => file.nom_fichier_concatiner);
-      res.json(lastFiles);
+
+      const textdateResult = await pool.query(textdateQuery, [fileId]);
+      let textdate = null;
+
+      if (textdateResult.rows.length > 0) {
+          textdate = textdateResult.rows[0].textdate;
+      }
+
+      // Récupérer les statistiques pour le fichier_id donné
+      // Récupérer les statistiques pour le fichier_id donné
+      const summaryQuery = `
+      SELECT
+      CASE
+          WHEN name_3 = '@WEB-UI' THEN 'WEB-UI Automated Tests'
+          WHEN name_3 = '@Data_Management' THEN 'Data_Management Automated Tests'
+          WHEN name_3 = '@REST' THEN 'REST Automated Tests'
+          WHEN name_3 = '@Navigation' THEN 'Navigation Automated Tests'
+          WHEN name_2 IN ('@Data_Management','@WEB-UI', '@REST', '@Navigation') THEN REPLACE(name_2, '@', '') || '-Automated Tests'
+          ELSE NULL -- Dans le cas où aucun des cas ci-dessus n'est vérifié
+      END AS tag,
+     
+      (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'passed') AS total_passed,
+      (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'failed') AS total_failed,
+      (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'skipped') AS total_skipped,
+      (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'pending') AS total_pending,
+      ((SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'passed')
+       + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'failed')
+       + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'skipped')
+       + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'pending')) AS total_steps,
+      (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1) AS total_testname,
+      $2 AS first_textdate,
+      (SELECT type FROM scenarios WHERE fichier_Id = $1 AND textdate IS NOT NULL ORDER BY textdate LIMIT 1) AS first_type,
+      (SELECT Build_hash FROM scenarios WHERE fichier_Id = $1 LIMIT 1) AS build_hash, -- Ajout de Build_hash
+      CONCAT(FORMAT('%s', ((SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'passed') * 100.0 /
+          ((SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'passed')
+           + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'failed')
+           + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'skipped')
+           + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'pending')))), 'N', 'C', '%') AS passed_percentage,
+     
+     
+  CONCAT(FORMAT('%s', ((SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'failed') * 100.0 /
+      ((SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'passed')
+       + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'failed')
+       + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'skipped')
+       + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'pending')))), 'N', 'C', '%') AS failed_percentage,
+     
+  CONCAT(FORMAT('%s', ((SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'skipped') * 100.0 /
+      ((SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'passed')
+       + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'failed')
+       + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'skipped')
+       + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'pending')))), 'N', 'C', '%') AS skipped_percentage,
+     
+  CONCAT(FORMAT('%s', ((SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'pending') * 100.0 /
+      ((SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'passed')
+       + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'failed')
+       + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'skipped')
+       + (SELECT COUNT(DISTINCT testname) FROM scenarios WHERE fichier_Id = $1 AND stepstatus = 'pending')))), 'N', 'C', '%') AS pending_percentage
+ 
+ 
+  FROM
+      scenarios
+  WHERE
+      fichier_Id = $1
+      AND (name_3 IN ('@WEB-UI','@Data_Management', '@REST', '@Navigation') OR name_2 IN ('@WEB-UI','@Data_Management', '@REST', '@Navigation'))
+  GROUP BY
+      tag
+  ORDER BY
+      tag
+  LIMIT 1;
+ 
+ 
+ 
+
+ 
+     
+`;
+
+
+      const summaryResult = await pool.query(summaryQuery, [fileId, textdate]);
+      let summary = summaryResult.rows[0]; // On suppose qu'il n'y a qu'une seule ligne de résultats
+
+      // Modifier les valeurs de tag
+      if (summary.tag === '@WEB-UI') {
+          summary.tag = 'WEB-UI Automated Tests';
+      } else if (summary.tag === '@Data_Management' || summary.tag === '@REST' || summary.tag === '@Navigation') {
+          summary.tag = summary.tag.replace('@', '') + ' Automated Tests';
+      }
+   
+     
+      const percentages = {
+          passed: parseFloat((summary.total_passed / summary.total_steps * 100).toFixed(2)),
+          failed: parseFloat((summary.total_failed / summary.total_steps * 100).toFixed(2)),
+          skipped: parseFloat((summary.total_skipped / summary.total_steps * 100).toFixed(2)),
+          pending: parseFloat((summary.total_pending / summary.total_steps * 100).toFixed(2))
+      };
+     
+
+      // Récupérer les statistiques pour le fichier_id donné
+      const featureSummaryQuery = `
+          SELECT
+              COUNT(DISTINCT CASE WHEN stepstatus = 'passed' THEN featurename END) AS total_passed,
+              COUNT(DISTINCT CASE WHEN stepstatus = 'failed' THEN featurename END) AS total_failed
+          FROM
+              scenarios
+          WHERE
+              fichier_Id = $1
+      `;
+
+      const featureSummaryResult = await pool.query(featureSummaryQuery, [fileId]);
+      const featureSummary = featureSummaryResult.rows;
+
+      console.log('Feature Summary:', featureSummary); // Ajoutez ce log pour vérifier si featureSummary est correctement récupéré
+
+      res.json({ summary, percentages, featureSummary });
   } catch (error) {
-      console.error('Error retrieving last files:', error);
+      console.error('Error retrieving summary:', error);
       res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-
-// Endpoint to get the 10 latest concatenated file names
-app.get('/latest-file-names', async (req, res) => {
-  try {
-    const latestFileNames = await getLatestFileNames();
-    res.json(latestFileNames);
-  } catch (error) {
-    console.error(error);
-    res.status(500).send('Internal Server Error');
-  }
-});
-
-async function getLatestFileNames() {
-  const client = await pool.connect();
-  try {
-    const query = `
-    SELECT DISTINCT nom_fichier_concatiner
-    FROM fichier_enregistres
-    ORDER BY nom_fichier_concatiner DESC
-    LIMIT 10;
-    
+app.get('/lastfiles', async (req, res) => {
+try {
+    const lastFilesQuery = `
+        SELECT nom_fichier_concatiner
+        FROM fichier_enregistres
+        ORDER BY date_enregistrement DESC
+        LIMIT 10;
     `;
-    const result = await client.query(query);
-    return result.rows.map(row => row.nom_fichier_concatiner);
-  } finally {
-    client.release();
-  }
+    const lastFilesResult = await pool.query(lastFilesQuery);
+    const lastFiles = lastFilesResult.rows.map(file => file.nom_fichier_concatiner);
+    res.json(lastFiles);
+} catch (error) {
+    console.error('Error retrieving last files:', error);
+    res.status(500).json({ error: 'Internal server error' });
 }
+});
 
 
  // Endpoint pour obtenir les FeatureName distinctes de deux fichiers
@@ -983,102 +961,6 @@ app.get('/features/distinct', async (req, res) => {
       client.release();
     }
   }
-
-    
-async function getTestNamesForFeature(featureName, file1, file2) {
-  const client = await pool.connect();
-  try {
-    const query = `
-    WITH StepStatus AS (
-      SELECT
-          tn.TestID,
-          fe.nom_fichier_concatiner,
-          fe.type,
-          CASE
-              WHEN 'failed' IN (
-                  SELECT s.StepStatus
-                  FROM Steps s
-                  WHERE s.TestID = tn.TestID
-              ) THEN 'failed'
-              WHEN EXISTS (
-                  SELECT 1
-                  FROM Steps s
-                  WHERE s.TestID = tn.TestID
-                    AND s.StepStatus = 'pending'
-              ) THEN 'pending'
-              WHEN 'skipped' IN (
-                  SELECT s.StepStatus
-                  FROM Steps s
-                  WHERE s.TestID = tn.TestID
-              ) THEN
-                  CASE
-                      WHEN EXISTS (
-                          SELECT 1
-                          FROM Steps sp
-                          WHERE sp.TestID = tn.TestID
-                            AND sp.StepStatus = 'pending'
-                      ) THEN 'pending'
-                      ELSE 'skipped'
-                  END
-              ELSE 'passed'
-          END AS StepStatus
-      FROM
-          TagsNames tn
-      INNER JOIN
-          Tests t ON tn.TestID = t.TestID
-      INNER JOIN
-          fichier_enregistres fe ON t.fichier_id = fe.fichier_id
-  )
-  SELECT
-      f.FeatureName,
-      ARRAY_AGG(
-          CASE
-              WHEN tag.name_3 LIKE '@DHRD-%' THEN tag.name_3
-              WHEN tag.name_4 LIKE '@DHRD-%' THEN tag.name_4
-          END
-      ) AS TestNames,
-      ARRAY_AGG(t.TestName) AS TestName,
-      MAX(CASE WHEN fe.nom_fichier_concatiner = $2 THEN ss.StepStatus END) AS StepStatusFile1,
-      MAX(CASE WHEN fe.nom_fichier_concatiner = $3 THEN ss.StepStatus END) AS StepStatusFile2,
-      (SELECT fe.type FROM fichier_enregistres fe WHERE fe.nom_fichier_concatiner = $2) AS FileTypeFile1,
-      (SELECT fe.type FROM fichier_enregistres fe WHERE fe.nom_fichier_concatiner = $3) AS FileTypeFile2,
-      (SELECT textdate FROM scenarios WHERE fichier_id = (SELECT fichier_id FROM fichier_enregistres WHERE nom_fichier_concatiner = $2) AND textdate IS NOT NULL AND textdate ~* '\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z' ORDER BY textdate LIMIT 1) AS DateFile1,
-      (SELECT textdate FROM scenarios WHERE fichier_id = (SELECT fichier_id FROM fichier_enregistres WHERE nom_fichier_concatiner = $3) AND textdate IS NOT NULL AND textdate ~* '\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z' ORDER BY textdate LIMIT 1) AS DateFile2
-  FROM
-      Features f
-  INNER JOIN
-      Tests t ON f.TestID = t.TestID
-  INNER JOIN
-      TagsNames tag ON t.TestID = tag.TestID
-  INNER JOIN
-      fichier_enregistres fe ON fe.fichier_id = t.fichier_id
-  INNER JOIN
-      StepStatus ss ON ss.TestID = t.TestID
-  WHERE
-      f.FeatureName = $1 AND fe.nom_fichier_concatiner IN ($2, $3)
-  GROUP BY
-      f.FeatureName, t.TestName;
- 
-`;
- 
- 
-      const result = await client.query(query, [featureName, file1, file2]);
-      return result.rows.map(row => ({
-          featureName: row.featurename,
-          testNames: row.testnames.filter(name => name), // Filtrer les noms null
-          testName: row.testname.filter(name => name), // Filtrer les noms null
-          stepStatusFile1: row.stepstatusfile1,
-          stepStatusFile2: row.stepstatusfile2,
-          fileTypeFile1: row.filetypefile1,
-          fileTypeFile2: row.filetypefile2,
-          dateFile1: convertDate(row.datefile1),
-          dateFile2: convertDate(row.datefile2)
-      }));
-  } finally {
-      client.release();
-  }
-}
- 
   
 // Fonction de conversion de date avec suppression des secondes et des millisecondes
 function convertDate(dateString) {
@@ -1093,7 +975,132 @@ function convertDate(dateString) {
   const formattedDate = `${year}${month}${day}-00${hours}${minutes}`;
   return formattedDate;
 }
+async function getTestNamesForFeature(featureName, file1, file2) {
+  const client = await pool.connect();
+  try {
+      const query = `
+      WITH StepStatus AS (
+          SELECT
+              tn.TestID,
+              fe.nom_fichier_concatiner,
+              fe.type,
+              CASE
+                  WHEN 'failed' IN (
+                      SELECT s.StepStatus
+                      FROM Steps s
+                      WHERE s.TestID = tn.TestID
+                  ) THEN 'failed'
+                  WHEN EXISTS (
+                      SELECT 1
+                      FROM Steps s
+                      WHERE s.TestID = tn.TestID
+                        AND s.StepStatus = 'pending'
+                  ) THEN 'pending'
+                  WHEN 'skipped' IN (
+                      SELECT s.StepStatus
+                      FROM Steps s
+                      WHERE s.TestID = tn.TestID
+                  ) THEN
+                      CASE
+                          WHEN EXISTS (
+                              SELECT 1
+                              FROM Steps sp
+                              WHERE sp.TestID = tn.TestID
+                                AND sp.StepStatus = 'pending'
+                          ) THEN 'pending'
+                          ELSE 'skipped'
+                      END
+                  ELSE 'passed'
+              END AS StepStatus,
+              CASE
+                  WHEN 'failed' IN (
+                      SELECT s.StepStatus
+                      FROM Steps s
+                      WHERE s.TestID = tn.TestID
+                  ) THEN (
+                      SELECT s.error_message
+                      FROM Steps s
+                      WHERE s.TestID = tn.TestID
+                        AND s.StepStatus = 'failed'
+                      LIMIT 1
+                  )
+              END AS ErrorMessage,
+              CASE
+              WHEN 'failed' IN (
+                  SELECT s.StepStatus
+                  FROM Steps s
+                  WHERE s.TestID = tn.TestID
+              ) THEN (
+                  SELECT e.imagedata
+                  FROM Steps s
+                  INNER JOIN embeddings e ON s.stepid = e.stepid
+                  WHERE s.TestID = tn.TestID
+                    AND s.StepStatus = 'failed'
+                  LIMIT 1
+              )
+          END AS ImageData
+          FROM
+              TagsNames tn
+          INNER JOIN
+              Tests t ON tn.TestID = t.TestID
+          INNER JOIN
+              fichier_enregistres fe ON t.fichier_id = fe.fichier_id
+      )
+      SELECT
+          f.FeatureName,
+          ARRAY_AGG(
+              CASE
+                  WHEN tag.name_3 LIKE '@DHRD-%' THEN tag.name_3
+                  WHEN tag.name_4 LIKE '@DHRD-%' THEN tag.name_4
+              END
+          ) AS TestNames,
+          ARRAY_AGG(t.TestName) AS TestName,
+          MAX(CASE WHEN fe.nom_fichier_concatiner = $2 THEN ss.StepStatus END) AS StepStatusFile1,
+          MAX(CASE WHEN fe.nom_fichier_concatiner = $3 THEN ss.StepStatus END) AS StepStatusFile2,
+          MAX(CASE WHEN fe.nom_fichier_concatiner = $2 THEN ss.ErrorMessage END) AS ErrorMessageFile1,
+          MAX(CASE WHEN fe.nom_fichier_concatiner = $3 THEN ss.ErrorMessage END) AS ErrorMessageFile2,
+          MAX(CASE WHEN fe.nom_fichier_concatiner = $2 THEN ss.ImageData END) AS ImageDataFile1,
+          MAX(CASE WHEN fe.nom_fichier_concatiner = $3 THEN ss.ImageData END) AS ImageDataFile2,
+          (SELECT fe.type FROM fichier_enregistres fe WHERE fe.nom_fichier_concatiner = $2) AS FileTypeFile1,
+          (SELECT fe.type FROM fichier_enregistres fe WHERE fe.nom_fichier_concatiner = $3) AS FileTypeFile2,
+          (SELECT textdate FROM scenarios WHERE fichier_id = (SELECT fichier_id FROM fichier_enregistres WHERE nom_fichier_concatiner = $2) AND textdate IS NOT NULL AND textdate ~* '\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z' ORDER BY textdate LIMIT 1) AS DateFile1,
+          (SELECT textdate FROM scenarios WHERE fichier_id = (SELECT fichier_id FROM fichier_enregistres WHERE nom_fichier_concatiner = $3) AND textdate IS NOT NULL AND textdate ~* '\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z' ORDER BY textdate LIMIT 1) AS DateFile2
+      FROM
+          Features f
+      INNER JOIN
+          Tests t ON f.TestID = t.TestID
+      INNER JOIN
+          TagsNames tag ON t.TestID = tag.TestID
+      INNER JOIN
+          fichier_enregistres fe ON fe.fichier_id = t.fichier_id
+      INNER JOIN
+          StepStatus ss ON ss.TestID = t.TestID
+      WHERE
+          f.FeatureName = $1 AND fe.nom_fichier_concatiner IN ($2, $3)
+      GROUP BY
+          f.FeatureName, t.TestName;
+      `;
 
+      const result = await client.query(query, [featureName, file1, file2]);
+      return result.rows.map(row => ({
+          featureName: row.featurename,
+          testNames: row.testnames.filter(name => name), // Filter null names
+          testName: row.testname.filter(name => name), // Filter null names
+          stepStatusFile1: row.stepstatusfile1,
+          stepStatusFile2: row.stepstatusfile2,
+          errorMessageFile1: row.errormessagefile1,
+          errorMessageFile2: row.errormessagefile2,
+          imageDataFile1: row.imagedatafile1,
+          imageDataFile2: row.imagedatafile2,
+          fileTypeFile1: row.filetypefile1,
+          fileTypeFile2: row.filetypefile2,
+          dateFile1: convertDate(row.datefile1),
+          dateFile2: convertDate(row.datefile2)
+      }));
+  } finally {
+      client.release();
+  }
+}
 
 
 
@@ -1134,21 +1141,20 @@ app.get('/automated', async (req, res) => {
   }
 });
 
-
 app.get('/data', async (req, res) => {
   try {
     let suiteFilter = '';
     const { suite, period } = req.query;
- 
+
     // Vérifiez si le paramètre suite est fourni dans la requête
     if (suite) {
       suiteFilter = `WHERE suite = '${suite}'`;
     }
- 
+
     let query = `SELECT scenario, test_cases, bugs_on_jira, selected_sprint
                  FROM automated_data
                  ${suiteFilter}`;
- 
+
     // Ajouter les conditions de période
     if (period === '6months') {
       query = `SELECT * FROM (
@@ -1169,10 +1175,10 @@ app.get('/data', async (req, res) => {
                ) AS recent_sprints
                ORDER BY created_at ASC`;
     }
- 
+
     // Exécution de la requête
     const result = await pool.query(query);
- 
+
     // Récupération des données de la base de données
     const data = result.rows.map(row => ({
       scenario: row.scenario,
@@ -1180,10 +1186,10 @@ app.get('/data', async (req, res) => {
       bugs_on_jira: row.bugs_on_jira,
       selected_sprint: row.selected_sprint
     }));
- 
+
     // Afficher les données dans la console
     console.log('Data:', data);
- 
+
     // Envoi des données au client
     res.json(data);
   } catch (error) {
@@ -1191,8 +1197,6 @@ app.get('/data', async (req, res) => {
     res.status(500).json({ message: 'Error fetching data' });
   }
 });
-
-
 
 // Route pour la modification des données
 app.delete('/automated/:id', async (req, res) => {
@@ -1654,18 +1658,6 @@ app.post('/check-and-display', async (req, res) => {
         res.status(500).send('Erreur lors de la récupération des données: ' + error.message);
     }
 });
-
-
-  
-
-
-
-
-
-
-
-
-
 app.listen(PORT, () => {
     console.log(`Serveur Express en cours d'exécution sur le port ${PORT}`);
   });
