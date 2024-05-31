@@ -10,18 +10,19 @@ import CoverLayout from "layouts/authentication/components/CoverLayout";
 import bgImage from "assets/images/neoxam.jpg";
 import './style.css';
 import { useAuth } from 'context/authContext';
- 
- 
+import { useLocation } from "react-router-dom";
+
 const Login = () => {
     const navigate = useNavigate();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [attemptCount, setAttemptCount] = useState(0);
     const [isAccountLocked, setIsAccountLocked] = useState(false);
     const [lockMessage, setLockMessage] = useState("");
     const [lockTime, setLockTime] = useState(0);
     const [loginSuccess, setLoginSuccess] = useState(false);
     const { login } = useAuth();
+    const location = useLocation();
+
     useEffect(() => {
         if (lockTime > 0) {
             const timer = setInterval(() => {
@@ -45,56 +46,71 @@ const Login = () => {
             navigate("/dashboard");
         }
     }, [loginSuccess, navigate]);
+
+    useEffect(() => {
+        const queryParams = new URLSearchParams(location.search);
+        if (queryParams.get('verified') === 'true') {
+            showAlert('Your email has been verified. Please log in.');
+            navigate('/login'); // Rediriger vers la page de connexion après la vérification
+        }
+    }, [location, navigate]);
+    
+
  
     const handleLogin = async (e) => {
         e.preventDefault();
- 
+      
         if (isAccountLocked) {
-            showAlert(lockMessage.replace(/\d+ seconds/, `${lockTime} seconds`));
-            return;
+          showAlert(lockMessage.replace(/\d+ seconds/, `${lockTime} seconds`));
+          return;
         }
- 
-        const url = "http://localhost:3003/login"; // Change this to your server URL
+      
+        const url = "http://localhost:3003/login";
         const data = { email, password };
- 
+      
         try {
-            const response = await axios.post(url, data);
-            console.log(response.data);
-            setLoginSuccess(true);
- 
-            // Store the token and user role in local storage after a successful login
-            const { token, role } = response.data;
-            localStorage.setItem("token", token);
-            localStorage.setItem("role", role);  // Store user role
-            login();
+          const response = await axios.post(url, data);
+          console.log(response.data);
+      
+          if (!response.data.is_verified) {
+            showAlert("Your email is not verified. Please check your email to verify your account.");
+            return;
+          }
+          
+          setLoginSuccess(true);
+          const { token, role } = response.data;
+          localStorage.setItem("token", token);
+          localStorage.setItem("role", role);
+          login();
+          navigate('/dashboard');
         } catch (error) {
-            if (error.response) {
-                console.error("Erreur de réponse du serveur:", error.response.data);
-                const errorMessage = `Error: ${error.response.data.message}`;
-                setLockMessage(errorMessage);
- 
-                if (error.response.data.message.includes('locked')) {
-                    const match = error.response.data.message.match(/(\d+) seconds/);
-                    if (match) {
-                        const lockDuration = parseInt(match[1], 10);
-                        setLockTime(lockDuration);
-                        setIsAccountLocked(true);
-                    }
-                }
- 
-                showAlert(errorMessage.replace(/\d+ seconds/, `${lockTime} seconds`));
-            } else if (error.request) {
-                console.error("Aucune réponse du serveur reçue.");
-                const errorMessage = "Error: The server did not respond. Please try again later.";
-                showAlert(errorMessage);
-            } else {
-                console.error("Erreur lors de la configuration de la requête:", error.message);
-                const errorMessage = "Error: An error occurred while setting up the request. Please check your connection and try again.";
-                showAlert(errorMessage);
+          if (error.response) {
+            console.error("Erreur de réponse du serveur:", error.response.data);
+            const errorMessage = `Error: ${error.response.data.message}`;
+            setLockMessage(errorMessage);
+      
+            if (error.response.data.message.includes('locked')) {
+              const match = error.response.data.message.match(/(\d+) seconds/);
+              if (match) {
+                const lockDuration = parseInt(match[1], 10);
+                setLockTime(lockDuration);
+                setIsAccountLocked(true);
+              }
             }
+      
+            showAlert(errorMessage.replace(/\d+ seconds/, `${lockTime} seconds`));
+          } else if (error.request) {
+            console.error("Aucune réponse du serveur reçue.");
+            const errorMessage = "Error: The server did not respond. Please try again later.";
+            showAlert(errorMessage);
+          } else {
+            console.error("Erreur lors de la configuration de la requête:", error.message);
+            const errorMessage = "Error: An error occurred while setting up the request. Please check your connection and try again.";
+            showAlert(errorMessage);
+          }
         }
-    };
- 
+      };
+    
     const showAlert = (message) => {
         const existingAlert = document.querySelector(".custom-alert");
         if (existingAlert) {
@@ -105,7 +121,6 @@ const Login = () => {
         alertContainer.classList.add("custom-alert");
         alertContainer.textContent = message;
    
- 
         const okButton = document.createElement("button");
         okButton.textContent = "OK";
         okButton.style.width = '20%';
@@ -131,7 +146,6 @@ const Login = () => {
         alertContainer.style.zIndex = '9999';
         alertContainer.style.fontFamily = 'italic';
        
- 
         document.body.appendChild(alertContainer);
     };
  
@@ -217,3 +231,4 @@ const Login = () => {
 };
  
 export default Login;
+

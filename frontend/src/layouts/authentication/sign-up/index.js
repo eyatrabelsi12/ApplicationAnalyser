@@ -89,12 +89,16 @@ const Register = () => {
     try {
       const response = await axios.post(url, data);
       console.log(response.data);
-      setRegistrationSuccess(true);
- 
-      setTimeout(() => {
-        navigate('/authentication/sign-in');
-      }, 3000);  // Délai de 3 secondes avant la navigation vers la page de connexion
-    } catch (error) {
+      const alertDiv = document.createElement('div');
+      alertDiv.setAttribute('style', 'position: fixed; top: 11%; left: 53%; transform: translate(-50%, -50%); padding: 20px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); border-radius: 5px; z-index: 9999; font-family: italic;');
+      alertDiv.innerHTML = `
+      Registration successful! Please check your email to verify your account.
+          <button style="width: 20%; background-color: black; color: white; font-family: italic; border-color: #1de9b6; margin-left: 75%;" onclick="this.parentNode.remove()">OK</button>
+      `;
+      document.body.appendChild(alertDiv);
+      // Inform the user to check their email for verification
+     
+    }catch (error) {
       console.error('Error during registration:', error);
       if (error.response && error.response.data && error.response.data.message === 'This email is already registered.') {
         const alertDiv = document.createElement('div');

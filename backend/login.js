@@ -28,103 +28,169 @@ const transporter = nodemailer.createTransport({
   }
 });
 app.post('/login', async (req, res) => {
-  const { email, password } = req.body;
- 
-  if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password are required.' });
-  }
- 
-  try {
-      const { rows } = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-      if (rows.length > 0) {
-          const user = rows[0];
- 
-          // Vérifier si l'utilisateur est verrouillé
-          if (user.lock_until && user.lock_until > new Date()) {
-              const lockDuration = (new Date(user.lock_until) - new Date()) / 1000; // Convertir en secondes
-              return res.status(403).json({ message: `Your account is locked. Try again in ${Math.ceil(lockDuration)} seconds.` });
-          }
- 
-          if (await bcrypt.compare(password, user.password)) {
-              // Réinitialiser les tentatives échouées après une connexion réussie
-              await pool.query('UPDATE users SET failed_attempts = 0, lock_until = NULL WHERE email = $1', [email]);
- 
-              // Vérifiez et attribuez le rôle si nécessaire
-              if (email === 'Nesrinedhaouadi@gmail.com' && user.role !== 'admin') {
-                  user.role = 'admin';
-                  await pool.query('UPDATE users SET role = $1 WHERE email = $2', [user.role, email]);
-              }
- 
-              const payload = { id: user.id, username: user.username, role: user.role }; // Ajout du rôle au payload
-              const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '2h' });
-              return res.json({ token, role: user.role }); // Retournez également le rôle de l'utilisateur
-          } else {
-              // Incrémenter les tentatives échouées
-              let failedAttempts = user.failed_attempts + 1;
-              let lockUntil = null;
-              let lockMessage = 'Invalid credentials';
- 
-              if (failedAttempts === 4) {
-                  lockUntil = new Date(Date.now() + 15000); // 15 secondes
-                  lockMessage = 'Your account is locked for 15 seconds due to multiple failed login attempts.';
-              } else if (failedAttempts === 8) {
-                  lockUntil = new Date(Date.now() + 7200000); // 2 heures
-                  lockMessage = 'Your account is locked for 2 hours due to multiple failed login attempts.';
-              }
- 
-              await pool.query('UPDATE users SET failed_attempts = $1, lock_until = $2 WHERE email = $3', [failedAttempts, lockUntil, email]);
-              return res.status(400).json({ message: lockMessage });
-          }
-      } else {
-          return res.status(400).json({ message: 'User does not exist' });
-      }
-  } catch (err) {
-      return res.status(500).json({ message: err.message });
-  }
-});
- 
- 
- 
- 
-  app.post('/register', async (req, res) => {
-    const { email, password, username } = req.body;
- 
-    // Vérification de la présence des champs email, password et username
-    if (!email || !password || !username) {
-      return res.status(400).json({ message: 'Email, password, and username are required.' });
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+        return res.status(400).json({ message: 'Email and password are required.' });
     }
- 
+
     try {
-         // Vérifier si l'email existe déjà
-         const emailCheck = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
-         if (emailCheck.rows.length > 0) {
-             return res.status(400).json({ message: 'This email is already registered.' });
-         }
- 
-         let role = 'user';
-         if (email === 'Nesrinedhaouadi@gmail.com' || email === 'manelbacha.master@gmail.com') {
-           role = 'admin';
-         }
-      // Hashage du mot de passe
-      const hashedPassword = await bcrypt.hash(password, 10);
- 
-      // Insertion de l'utilisateur dans la table users
-      const result = await pool.query(
-        'INSERT INTO users (email, password, username, role) VALUES ($1, $2, $3, $4) ON CONFLICT (email) DO UPDATE SET password = $2, username = $3, role = $4 RETURNING id, email, role',
-        [email, hashedPassword, username, role]
-      );
- 
-      console.log('User registered:', result.rows[0]);
-      res.status(201).json(result.rows[0]);
+        const { rows } = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+        if (rows.length > 0) {
+            const user = rows[0];
+
+            // Vérifier si l'utilisateur est verrouillé
+            if (user.lock_until && user.lock_until > new Date()) {
+                const lockDuration = (new Date(user.lock_until) - new Date()) / 1000; // Convertir en secondes
+                return res.status(403).json({ message: `Your account is locked. Try again in ${Math.ceil(lockDuration)} seconds.` });
+            }
+
+            if (await bcrypt.compare(password, user.password)) {
+                // Réinitialiser les tentatives échouées après une connexion réussie
+                await pool.query('UPDATE users SET failed_attempts = 0, lock_until = NULL WHERE email = $1', [email]);
+
+                // Vérifiez et attribuez le rôle si nécessaire
+                if (email === 'Nesrinedhaouadi@gmail.com' && user.role !== 'admin') {
+                    user.role = 'admin';
+                    await pool.query('UPDATE users SET role = $1 WHERE email = $2', [user.role, email]);
+                }
+
+                const payload = { id: user.id, username: user.username, role: user.role, is_verified: user.is_verified }; // Ajout du rôle et is_verified au payload
+                const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '2h' });
+                return res.json({ token, role: user.role, is_verified: user.is_verified }); // Retournez également le rôle de l'utilisateur et is_verified
+            } else {
+                // Incrémenter les tentatives échouées
+                let failedAttempts = user.failed_attempts + 1;
+                let lockUntil = null;
+                let lockMessage = 'Invalid credentials';
+
+                if (failedAttempts === 4) {
+                    lockUntil = new Date(Date.now() + 15000); // 15 secondes
+                    lockMessage = 'Your account is locked for 15 seconds due to multiple failed login attempts.';
+                } else if (failedAttempts === 8) {
+                    lockUntil = new Date(Date.now() + 7200000); // 2 heures
+                    lockMessage = 'Your account is locked for 2 hours due to multiple failed login attempts.';
+                }
+
+                await pool.query('UPDATE users SET failed_attempts = $1, lock_until = $2 WHERE email = $3', [failedAttempts, lockUntil, email]);
+                return res.status(400).json({ message: lockMessage });
+            }
+        } else {
+            return res.status(400).json({ message: 'User does not exist' });
+        }
     } catch (err) {
-      console.error('Error during registration:', err);
-      res.status(500).json({ message: err.message });
+        return res.status(500).json({ message: err.message });
     }
-  });
+});
+
  
  
  
+app.post('/register', async (req, res) => {
+    const { email, password, username } = req.body;
+
+    if (!email || !password || !username) {
+        return res.status(400).json({ message: 'Email, password, and username are required.' });
+    }
+
+    try {
+        const emailCheck = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+        if (emailCheck.rows.length > 0) {
+            return res.status(400).json({ message: 'This email is already registered.' });
+        }
+
+        let role = 'user';
+        if (email === 'eyatrabelsi868@gmail.com' || email === 'manelbacha.master@gmail.com') {
+            role = 'admin';
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const result = await pool.query(
+            'INSERT INTO users (email, password, username, role, is_verified) VALUES ($1, $2, $3, $4, false) RETURNING id, email, role',
+            [email, hashedPassword, username, role]
+        );
+
+        // Generate verification token
+        const token = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+        // Send verification email
+        const verificationUrl = `http://localhost:3003/verify-email?token=${token}`;
+        await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: 'Verify Your Email',
+            html: `
+            <p>Welcome to the analyzer application!</p>
+            <p>Please verify your email by clicking the following link:</p>
+            <a href="${verificationUrl}">${verificationUrl}</a>`
+        });
+
+        console.log('User registered:', result.rows[0]);
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error('Error during registration:', err);
+        res.status(500).json({ message: err.message });
+    }
+});
+
+
+  app.get('/verify-email', async (req, res) => {
+    const { token } = req.query;
+
+    if (!token) {
+        return res.status(400).send('Token is required');
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const { email } = decoded;
+
+        const { rows } = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+        if (rows.length === 0 || rows[0].is_verified) {
+            return res.status(400).send('Email is already verified or user not found');
+        }
+
+        await pool.query('UPDATE users SET is_verified = true WHERE email = $1', [email]);
+        
+        // Redirect to the login page after verification
+        res.redirect('http://localhost:3000/login?verified=true');
+    } catch (error) {
+        res.status(500).send('Internal Server Error');
+    }
+});
+
+
+
+
  
+ 
+app.post('/send-verification-email', async (req, res) => {
+    const { email } = req.body;
+    const token = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    const verificationLink = `http://localhost:3000/verify-email?token=${token}`;
+
+    const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: 'Email Verification',
+        html: `
+        <p>Hello,</p>
+        <p>Please verify your email by clicking on the following link:</p>
+        <a href="${verificationLink}">${verificationLink}</a>`
+    };
+
+    try {
+        await transporter.sendMail(mailOptions);
+        res.status(200).send('Verification email sent');
+    } catch (error) {
+        console.error('Error sending verification email:', error);
+        res.status(500).send('Error sending email');
+    }
+});
+
+
+
+  
  
  
   app.post('/forgot-password', async (req, res) => {
@@ -245,4 +311,4 @@ app.post('/change-role', authenticateToken, async (req, res) => {
  
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
-});
+}); 
